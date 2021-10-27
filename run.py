@@ -97,6 +97,7 @@ if __name__ == "__main__":
     ## Solve the case when there is no face in the old photo
     stage_1_results = os.path.join(stage_1_output_dir, "restored_image")
     stage_4_output_dir = os.path.join(opts.output_folder, "final_output")
+    
     os.makedirs(stage_4_output_dir,exist_ok=True)
     os.makedirs(stage_1_results,exist_ok=True)
     for x in os.listdir(stage_1_results):
