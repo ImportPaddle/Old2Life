@@ -1,7 +1,10 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+<<<<<<< Updated upstream
 import paddle
+=======
+>>>>>>> Stashed changes
 import paddle.io
 from PIL import Image
 import paddle.vision.transforms as transforms
@@ -50,7 +53,11 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
     transform_list = []
     if 'resize' in opt.resize_or_crop:
         osize = [opt.loadSize, opt.loadSize]
+<<<<<<< Updated upstream
         transform_list.append(transforms.Resize(osize, method))
+=======
+        transform_list.append(transforms.Resize(osize, method))   
+>>>>>>> Stashed changes
     elif 'scale_width' in opt.resize_or_crop:
     #    transform_list.append(Lambda(lambda img: __scale_width(img, opt.loadSize, method)))  ## Here , We want the shorter side to match 256, and Resize will finish it.
         transform_list.append(transforms.Resize(256,method))

@@ -1,5 +1,6 @@
 .DS_Store
 
+<<<<<<< Updated upstream
 output/
 
 checkpoints/
@@ -17,3 +18,6 @@ __pycache__/
 *.dat
 
 Synchronized-BatchNorm-PyTorch/
+=======
+*.bat
+>>>>>>> Stashed changes
