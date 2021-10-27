@@ -7,7 +7,7 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 import os
 import functools
-from torch.autograd import Variable
+# from torch.autograd import Variable
 from Global.util.image_pool import ImagePool
 from Global.models.base_model import BaseModel
 from Global.models import networks
