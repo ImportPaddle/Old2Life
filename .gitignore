@@ -15,3 +15,5 @@ save/
 __pycache__/
 
 *.dat
+
+Synchronized-BatchNorm-PyTorch/
