@@ -137,9 +137,9 @@ class Pix2PixHDModel_Mapping(BaseModel):
             self.load_network(self.netG_A, "G", opt.use_vae_which_epoch, opt.load_pretrainA)
             self.load_network(self.netG_B, "G", opt.use_vae_which_epoch, opt.load_pretrainB)
             for param in self.netG_A.parameters():
-                param.requires_grad = False
+                param.stop_gradiant = True
             for param in self.netG_B.parameters():
-                param.requires_grad = False
+                param.stop_gradiant = True
             self.netG_A.eval()
             self.netG_B.eval()
 

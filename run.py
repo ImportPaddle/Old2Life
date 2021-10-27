@@ -5,11 +5,11 @@ import os
 import argparse
 import shutil
 import sys
-from subprocess import call
+from subprocess import call,run
 
 def run_cmd(command):
     try:
-        call(command, shell=True)
+        run(command, shell=True)
     except KeyboardInterrupt:
         print("Process interrupted")
         sys.exit(1)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     ## Solve the case when there is no face in the old photo
     stage_1_results = os.path.join(stage_1_output_dir, "restored_image")
     stage_4_output_dir = os.path.join(opts.output_folder, "final_output")
-    
+
     os.makedirs(stage_4_output_dir, exist_ok=True)
     os.makedirs(stage_1_results, exist_ok=True)
 

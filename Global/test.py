@@ -20,7 +20,8 @@ import cv2
 
 def data_transforms(img, method=Image.BILINEAR, scale=False):
 
-    ow, oh = img.shape
+    ow, oh = img.size
+    print(img.size)
     pw, ph = ow, oh
     if scale == True:
         if ow < oh:
@@ -29,13 +30,11 @@ def data_transforms(img, method=Image.BILINEAR, scale=False):
         else:
             oh = 256
             ow = pw / ph * 256
-
     h = int(round(oh / 4) * 4)
     w = int(round(ow / 4) * 4)
 
     if (h == ph) and (w == pw):
         return img
-
     return img.resize((w, h), method)
 
 
@@ -99,7 +98,7 @@ if __name__ == "__main__":
 
     opt = TestOptions().parse(save=False)
     parameter_set(opt)
-
+    print(opt)
     model = Pix2PixHDModel_Mapping()
 
     model.initialize(opt)
@@ -112,8 +111,6 @@ if __name__ == "__main__":
     if not os.path.exists(opt.outputs_dir + "/" + "origin"):
         os.makedirs(opt.outputs_dir + "/" + "origin")
 
-    dataset_size = 0
-
     input_loader = os.listdir(opt.test_input)
     dataset_size = len(input_loader)
     input_loader.sort()
@@ -124,7 +121,7 @@ if __name__ == "__main__":
         mask_loader.sort()
 
     img_transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        [transforms.ToTensor(), transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))]
     )
     mask_transform = transforms.ToTensor()
 
@@ -135,10 +132,10 @@ if __name__ == "__main__":
         if not os.path.isfile(input_file):
             print("Skipping non-file %s" % input_name)
             continue
+
         input = Image.open(input_file).convert("RGB")
 
         print("Now you are processing %s" % (input_name))
-
         if opt.NL_use_mask:
             mask_name = mask_loader[i]
             mask = Image.open(os.path.join(opt.test_mask, mask_name)).convert("RGB")
@@ -162,6 +159,15 @@ if __name__ == "__main__":
             if opt.test_mode == "Crop":
                 input = data_transforms_rgb_old(input)
             origin = input
+
+            import matplotlib.pyplot as plt
+            plt.figure('boy')
+            plt.imshow(input)
+
+            print('input:',input.__dict__,input.size)
+            # input=np.array(input).astype('uint8')
+
+
             input = img_transform(input)
             input = input.unsqueeze(0)
             mask = paddle.zeros_like(input)

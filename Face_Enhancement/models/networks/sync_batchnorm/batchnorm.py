@@ -11,15 +11,16 @@
 import collections
 import contextlib
 
-import torch
-import torch.nn.functional as F
+# import torch
+# import torch.nn.functional as F
+# from torch.nn.modules.batchnorm import _BatchNorm
 
-from torch.nn.modules.batchnorm import _BatchNorm
-
+import paddle
+import paddle.nn.functional as F
 try:
     from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
 except ImportError:
-    ReduceAddCoalesced = Broadcast = None
+    ReduceAddCoalesced = Broadcast = None # todo 可能很有问题
 
 try:
     from jactorch.parallel.comm import SyncMaster
@@ -57,8 +58,28 @@ def _unsqueeze_ft(tensor):
 _ChildMessage = collections.namedtuple('_ChildMessage', ['sum', 'ssum', 'sum_size'])
 _MasterMessage = collections.namedtuple('_MasterMessage', ['sum', 'inv_std'])
 
+class BatchNormBase(paddle.nn.layer.norm._BatchNormBase):
+    def __init__(self,
+                 num_features,
+                 eps=1e-05,
+                 momentum=0.1,
+                 affine=True,
+                 track_running_stats=True):
+        momentum = 1 - momentum
+        weight_attr = None
+        bias_attr = None
+        if not affine:
+            weight_attr = paddle.ParamAttr(learning_rate=0.0)
+            bias_attr = paddle.ParamAttr(learning_rate=0.0)
+        super().__init__(
+            num_features,
+            momentum=momentum,
+            epsilon=eps,
+            weight_attr=weight_attr,
+            bias_attr=bias_attr,
+            use_global_stats=track_running_stats)
 
-class _SynchronizedBatchNorm(_BatchNorm):
+class _SynchronizedBatchNorm(BatchNormBase):
     def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True):
         assert ReduceAddCoalesced is not None, 'Can not use Synchronized Batch Normalization without CUDA support.'
 
@@ -150,8 +171,8 @@ class _SynchronizedBatchNorm(_BatchNorm):
         unbias_var = sumvar / (size - 1)
         bias_var = sumvar / size
 
-        if hasattr(torch, 'no_grad'):
-            with torch.no_grad():
+        if hasattr(paddle, 'no_grad'):
+            with paddle.no_grad():
                 self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean.data
                 self.running_var = (1 - self.momentum) * self.running_var + self.momentum * unbias_var.data
         else:
@@ -214,12 +235,6 @@ class SynchronizedBatchNorm1d(_SynchronizedBatchNorm):
         - Output: :math:`(N, C)` or :math:`(N, C, L)` (same shape as input)
 
     Examples:
-        >>> # With Learnable Parameters
-        >>> m = SynchronizedBatchNorm1d(100)
-        >>> # Without Learnable Parameters
-        >>> m = SynchronizedBatchNorm1d(100, affine=False)
-        >>> input = torch.autograd.Variable(torch.randn(20, 100))
-        >>> output = m(input)
     """
 
     def _check_input_dim(self, input):
@@ -275,13 +290,7 @@ class SynchronizedBatchNorm2d(_SynchronizedBatchNorm):
         - Input: :math:`(N, C, H, W)`
         - Output: :math:`(N, C, H, W)` (same shape as input)
 
-    Examples:
-        >>> # With Learnable Parameters
-        >>> m = SynchronizedBatchNorm2d(100)
-        >>> # Without Learnable Parameters
-        >>> m = SynchronizedBatchNorm2d(100, affine=False)
-        >>> input = torch.autograd.Variable(torch.randn(20, 100, 35, 45))
-        >>> output = m(input)
+    Examples
     """
 
     def _check_input_dim(self, input):
@@ -339,12 +348,6 @@ class SynchronizedBatchNorm3d(_SynchronizedBatchNorm):
         - Output: :math:`(N, C, D, H, W)` (same shape as input)
 
     Examples:
-        >>> # With Learnable Parameters
-        >>> m = SynchronizedBatchNorm3d(100)
-        >>> # Without Learnable Parameters
-        >>> m = SynchronizedBatchNorm3d(100, affine=False)
-        >>> input = torch.autograd.Variable(torch.randn(20, 100, 35, 45, 10))
-        >>> output = m(input)
     """
 
     def _check_input_dim(self, input):
@@ -355,17 +358,17 @@ class SynchronizedBatchNorm3d(_SynchronizedBatchNorm):
 
 @contextlib.contextmanager
 def patch_sync_batchnorm():
-    import torch.nn as nn
+    import paddle.nn as nn
 
-    backup = nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d
+    backup = nn.BatchNorm1D, nn.BatchNorm2D, nn.BatchNorm3D
 
-    nn.BatchNorm1d = SynchronizedBatchNorm1d
-    nn.BatchNorm2d = SynchronizedBatchNorm2d
-    nn.BatchNorm3d = SynchronizedBatchNorm3d
+    nn.BatchNorm1D = SynchronizedBatchNorm1d
+    nn.BatchNorm2D = SynchronizedBatchNorm2d
+    nn.BatchNorm3D = SynchronizedBatchNorm3d
 
     yield
 
-    nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d = backup
+    nn.BatchNorm1D, nn.BatchNorm2D, nn.BatchNorm3D = backup
 
 
 def convert_model(module):
@@ -377,24 +380,17 @@ def convert_model(module):
         module: the input module needs to be convert to SyncBN model
 
     Examples:
-        >>> import torch.nn as nn
-        >>> import torchvision
-        >>> # m is a standard pytorch model
-        >>> m = torchvision.models.resnet18(True)
-        >>> m = nn.DataParallel(m)
-        >>> # after convert, m is using SyncBN
-        >>> m = convert_model(m)
     """
-    if isinstance(module, torch.nn.DataParallel):
+    if isinstance(module, paddle.DataParallel):
         mod = module.module
         mod = convert_model(mod)
         mod = DataParallelWithCallback(mod, device_ids=module.device_ids)
         return mod
 
     mod = module
-    for pth_module, sync_module in zip([torch.nn.modules.batchnorm.BatchNorm1d,
-                                        torch.nn.modules.batchnorm.BatchNorm2d,
-                                        torch.nn.modules.batchnorm.BatchNorm3d],
+    for pth_module, sync_module in zip([paddle.nn.BatchNorm1D,
+                                        paddle.nn.BatchNorm2D,
+                                        paddle.nn.BatchNorm3D],
                                        [SynchronizedBatchNorm1d,
                                         SynchronizedBatchNorm2d,
                                         SynchronizedBatchNorm3d]):

@@ -25,9 +25,9 @@ def weights_init(m):
 
 def get_norm_layer(norm_type="instance"):
     if norm_type == "batch":
-        norm_layer = functools.partial(nn.BatchNorm2D, affine=True)
+        norm_layer = functools.partial(nn.BatchNorm2D)
     elif norm_type == "instance":
-        norm_layer = functools.partial(nn.InstanceNorm2D, affine=False)
+        norm_layer = functools.partial(nn.InstanceNorm2D)
     elif norm_type == "spectral":
         norm_layer = paddle.nn.utils.spectral_norm()
     elif norm_type == "SwitchNorm":
@@ -828,7 +828,7 @@ class GANLoss(nn.Layer):
 
 ####################################### VGG Loss
 
-from torchvision import models
+# from torchvision import models
 class VGG19_torch(paddle.nn.Layer):
     def __init__(self, requires_grad=False):
         super(VGG19_torch, self).__init__()
