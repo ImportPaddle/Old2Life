@@ -5,7 +5,8 @@ import sys
 import argparse
 import os
 from util import util
-import torch
+# import torch
+import paddle
 import models
 import data
 import pickle
@@ -284,7 +285,7 @@ class BaseOptions:
         if len(opt.gpu_ids) > 0:
             print("The main GPU is ")
             print(opt.gpu_ids[0])
-            torch.cuda.set_device(opt.gpu_ids[0])
+            paddle.set_device(f"gpu:{opt.gpu_ids[0]}")
 
         assert (
             len(opt.gpu_ids) == 0 or opt.batchSize % len(opt.gpu_ids) == 0

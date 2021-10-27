@@ -368,7 +368,7 @@ if __name__ == "__main__":
         img_url = os.path.join(origin_url, x)
         pil_img = Image.open(img_url).convert("RGB")
 
-        origin_width, origin_height = pil_img.size
+        origin_width, origin_height = pil_img.shape
         image = np.array(pil_img)
 
         start = time.time()

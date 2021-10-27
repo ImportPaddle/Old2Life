@@ -1,14 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+import paddle
+import paddle.nn as nn
 from detection_models.sync_batchnorm import DataParallelWithCallback
 from detection_models.antialiasing import Downsample
 
 
-class UNet(nn.Module):
+class UNet(nn.Layer):
     def __init__(
         self,
         in_channels=3,
@@ -52,20 +54,20 @@ class UNet(nn.Module):
         prev_channels = in_channels
 
         self.first = nn.Sequential(
-            *[nn.ReflectionPad2d(3), nn.Conv2d(in_channels, 2 ** wf, kernel_size=7), nn.LeakyReLU(0.2, True)]
+            *[nn.Pad2D(3), nn.Conv2D(in_channels, 2 ** wf, kernel_size=7), nn.LeakyReLU(0.2, True)]
         )
         prev_channels = 2 ** wf
 
-        self.down_path = nn.ModuleList()
-        self.down_sample = nn.ModuleList()
+        self.down_path = nn.LayerList()
+        self.down_sample = nn.LayerList()
         for i in range(depth):
             if antialiasing and depth > 0:
                 self.down_sample.append(
                     nn.Sequential(
                         *[
-                            nn.ReflectionPad2d(1),
-                            nn.Conv2d(prev_channels, prev_channels, kernel_size=3, stride=1, padding=0),
-                            nn.BatchNorm2d(prev_channels),
+                            nn.Pad2D(1),
+                            nn.Conv2D(prev_channels, prev_channels, kernel_size=3, stride=1, padding=0),
+                            nn.BatchNorm2D(prev_channels),
                             nn.LeakyReLU(0.2, True),
                             Downsample(channels=prev_channels, stride=2),
                         ]
@@ -75,9 +77,9 @@ class UNet(nn.Module):
                 self.down_sample.append(
                     nn.Sequential(
                         *[
-                            nn.ReflectionPad2d(1),
-                            nn.Conv2d(prev_channels, prev_channels, kernel_size=4, stride=2, padding=0),
-                            nn.BatchNorm2d(prev_channels),
+                            nn.Pad2D(1),
+                            nn.Conv2D(prev_channels, prev_channels, kernel_size=4, stride=2, padding=0),
+                            nn.BatchNorm2D(prev_channels),
                             nn.LeakyReLU(0.2, True),
                         ]
                     )
@@ -87,7 +89,7 @@ class UNet(nn.Module):
             )
             prev_channels = 2 ** (wf + i + 1)
 
-        self.up_path = nn.ModuleList()
+        self.up_path = nn.LayerList()
         for i in reversed(range(depth)):
             self.up_path.append(
                 UNetUpBlock(conv_num, prev_channels, 2 ** (wf + i), up_mode, padding, batch_norm)
@@ -96,11 +98,11 @@ class UNet(nn.Module):
 
         if with_tanh:
             self.last = nn.Sequential(
-                *[nn.ReflectionPad2d(1), nn.Conv2d(prev_channels, out_channels, kernel_size=3), nn.Tanh()]
+                *[nn.Pad2D(1), nn.Conv2D(prev_channels, out_channels, kernel_size=3), nn.Tanh()]
             )
         else:
             self.last = nn.Sequential(
-                *[nn.ReflectionPad2d(1), nn.Conv2d(prev_channels, out_channels, kernel_size=3)]
+                *[nn.Pad2D(1), nn.Conv2D(prev_channels, out_channels, kernel_size=3)]
             )
 
         if sync_bn:
@@ -121,16 +123,16 @@ class UNet(nn.Module):
         return self.last(x)
 
 
-class UNetConvBlock(nn.Module):
+class UNetConvBlock(nn.Layer):
     def __init__(self, conv_num, in_size, out_size, padding, batch_norm):
         super(UNetConvBlock, self).__init__()
         block = []
 
         for _ in range(conv_num):
-            block.append(nn.ReflectionPad2d(padding=int(padding)))
-            block.append(nn.Conv2d(in_size, out_size, kernel_size=3, padding=0))
+            block.append(nn.Pad2D(padding=int(padding)))
+            block.append(nn.Conv2D(in_size, out_size, kernel_size=3, padding=0))
             if batch_norm:
-                block.append(nn.BatchNorm2d(out_size))
+                block.append(nn.BatchNorm2D(out_size))
             block.append(nn.LeakyReLU(0.2, True))
             in_size = out_size
 
@@ -141,16 +143,16 @@ class UNetConvBlock(nn.Module):
         return out
 
 
-class UNetUpBlock(nn.Module):
+class UNetUpBlock(nn.Layer):
     def __init__(self, conv_num, in_size, out_size, up_mode, padding, batch_norm):
         super(UNetUpBlock, self).__init__()
         if up_mode == "upconv":
-            self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=2, stride=2)
+            self.up = nn.Conv2DTranspose(in_size, out_size, kernel_size=2, stride=2)
         elif up_mode == "upsample":
             self.up = nn.Sequential(
                 nn.Upsample(mode="bilinear", scale_factor=2, align_corners=False),
-                nn.ReflectionPad2d(1),
-                nn.Conv2d(in_size, out_size, kernel_size=3, padding=0),
+                nn.Pad2D(1),
+                nn.Conv2D(in_size, out_size, kernel_size=3, padding=0),
             )
 
         self.conv_block = UNetConvBlock(conv_num, in_size, out_size, padding, batch_norm)
@@ -164,13 +166,13 @@ class UNetUpBlock(nn.Module):
     def forward(self, x, bridge):
         up = self.up(x)
         crop1 = self.center_crop(bridge, up.shape[2:])
-        out = torch.cat([up, crop1], 1)
+        out = paddle.concat([up, crop1], 1)
         out = self.conv_block(out)
 
         return out
 
 
-class UnetGenerator(nn.Module):
+class UnetGenerator(nn.Layer):
     """Create a Unet-based generator"""
 
     def __init__(self, input_nc, output_nc, num_downs, ngf=64, norm_type="BN", use_dropout=False):
@@ -187,9 +189,9 @@ class UnetGenerator(nn.Module):
 		"""
         super().__init__()
         if norm_type == "BN":
-            norm_layer = nn.BatchNorm2d
+            norm_layer = nn.BatchNorm2D
         elif norm_type == "IN":
-            norm_layer = nn.InstanceNorm2d
+            norm_layer = nn.InstanceNorm2D
         else:
             raise NameError("Unknown norm layer")
 
@@ -224,7 +226,7 @@ class UnetGenerator(nn.Module):
         return self.model(input)
 
 
-class UnetSkipConnectionBlock(nn.Module):
+class UnetSkipConnectionBlock(nn.Layer):
     """Defines the Unet submodule with skip connection.
 
 		-------------------identity----------------------
@@ -239,7 +241,7 @@ class UnetSkipConnectionBlock(nn.Module):
         submodule=None,
         outermost=False,
         innermost=False,
-        norm_layer=nn.BatchNorm2d,
+        norm_layer=nn.BatchNorm2D,
         use_dropout=False,
     ):
         """Construct a Unet submodule with skip connections.
@@ -255,28 +257,28 @@ class UnetSkipConnectionBlock(nn.Module):
 		"""
         super().__init__()
         self.outermost = outermost
-        use_bias = norm_layer == nn.InstanceNorm2d
+        use_bias = norm_layer == nn.InstanceNorm2D
         if input_nc is None:
             input_nc = outer_nc
-        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4, stride=2, padding=1, bias=use_bias)
+        downconv = nn.Conv2D(input_nc, inner_nc, kernel_size=4, stride=2, padding=1, bias_attr=use_bias)
         downrelu = nn.LeakyReLU(0.2, True)
         downnorm = norm_layer(inner_nc)
         uprelu = nn.LeakyReLU(0.2, True)
         upnorm = norm_layer(outer_nc)
 
         if outermost:
-            upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc, kernel_size=4, stride=2, padding=1)
+            upconv = nn.Conv2DTranspose(inner_nc * 2, outer_nc, kernel_size=4, stride=2, padding=1)
             down = [downconv]
             up = [uprelu, upconv, nn.Tanh()]
             model = down + [submodule] + up
         elif innermost:
-            upconv = nn.ConvTranspose2d(inner_nc, outer_nc, kernel_size=4, stride=2, padding=1, bias=use_bias)
+            upconv = nn.Conv2DTranspose(inner_nc, outer_nc, kernel_size=4, stride=2, padding=1, bias_attr=use_bias)
             down = [downrelu, downconv]
             up = [uprelu, upconv, upnorm]
             model = down + up
         else:
-            upconv = nn.ConvTranspose2d(
-                inner_nc * 2, outer_nc, kernel_size=4, stride=2, padding=1, bias=use_bias
+            upconv = nn.Conv2DTranspose(
+                inner_nc * 2, outer_nc, kernel_size=4, stride=2, padding=1, bias_attr=use_bias
             )
             down = [downrelu, downconv, downnorm]
             up = [uprelu, upconv, upnorm]
@@ -292,41 +294,41 @@ class UnetSkipConnectionBlock(nn.Module):
         if self.outermost:
             return self.model(x)
         else:  # add skip connections
-            return torch.cat([x, self.model(x)], 1)
+            return paddle.concat([x, self.model(x)], 1)
 
 
 # ============================================
 # Network testing
 # ============================================
-if __name__ == "__main__":
-    from torchsummary import summary
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    model = UNet_two_decoders(
-        in_channels=3,
-        out_channels1=3,
-        out_channels2=1,
-        depth=4,
-        conv_num=1,
-        wf=6,
-        padding=True,
-        batch_norm=True,
-        up_mode="upsample",
-        with_tanh=False,
-    )
-    model.to(device)
-
-    model_pix2pix = UnetGenerator(3, 3, 5, ngf=64, norm_type="BN", use_dropout=False)
-    model_pix2pix.to(device)
-
-    print("customized unet:")
-    summary(model, (3, 256, 256))
-
-    print("cyclegan unet:")
-    summary(model_pix2pix, (3, 256, 256))
-
-    x = torch.zeros(1, 3, 256, 256).requires_grad_(True).cuda()
-    g = make_dot(model(x))
-    g.render("models/Digraph.gv", view=False)
-
+# if __name__ == "__main__":
+    # from torchsummary import summary
+    # 
+    # device = paddle.get_device()
+    # 
+    # model = UNet_two_decoders(
+    #     in_channels=3,
+    #     out_channels1=3,
+    #     out_channels2=1,
+    #     depth=4,
+    #     conv_num=1,
+    #     wf=6,
+    #     padding=True,
+    #     batch_norm=True,
+    #     up_mode="upsample",
+    #     with_tanh=False,
+    # )
+    # model.to(device)
+    # 
+    # model_pix2pix = UnetGenerator(3, 3, 5, ngf=64, norm_type="BN", use_dropout=False)
+    # model_pix2pix.to(device)
+    # 
+    # print("customized unet:")
+    # summary(model, (3, 256, 256))
+    # 
+    # print("cyclegan unet:")
+    # summary(model_pix2pix, (3, 256, 256))
+    # 
+    # x = paddle.zeros([1, 3, 256, 256],).requires_grad_(True)
+    # g = make_dot(model(x))
+    # g.render("models/Digraph.gv", view=False)
+    # 

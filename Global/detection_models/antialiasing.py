@@ -1,14 +1,19 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
-import torch.nn.parallel
 import numpy as np
-import torch.nn as nn
-import torch.nn.functional as F
+
+# import torch
+# import torch.nn.parallel
+# import torch.nn as nn
+# import torch.nn.functional as F
+
+import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
 
 
-class Downsample(nn.Module):
+class Downsample(nn.Layer):
     # https://github.com/adobe/antialiased-cnns
 
     def __init__(self, pad_type="reflect", filt_size=3, stride=2, channels=None, pad_off=0):
@@ -42,8 +47,8 @@ class Downsample(nn.Module):
         elif self.filt_size == 7:
             a = np.array([1.0, 6.0, 15.0, 20.0, 15.0, 6.0, 1.0])
 
-        filt = torch.Tensor(a[:, None] * a[None, :])
-        filt = filt / torch.sum(filt)
+        filt = paddle.to_tensor(a[:, None] * a[None, :])
+        filt = filt / paddle.sum(filt)
         self.register_buffer("filt", filt[None, None, :, :].repeat((self.channels, 1, 1, 1)))
 
         self.pad = get_pad_layer(pad_type)(self.pad_sizes)
@@ -60,11 +65,11 @@ class Downsample(nn.Module):
 
 def get_pad_layer(pad_type):
     if pad_type in ["refl", "reflect"]:
-        PadLayer = nn.ReflectionPad2d
+        PadLayer = nn.Pad2D
     elif pad_type in ["repl", "replicate"]:
-        PadLayer = nn.ReplicationPad2d
+        PadLayer = nn.Pad2D
     elif pad_type == "zero":
-        PadLayer = nn.ZeroPad2d
+        PadLayer = nn.Pad2D(value=0.0)
     else:
         print("Pad type [%s] not recognized" % pad_type)
     return PadLayer

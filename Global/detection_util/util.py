@@ -9,16 +9,25 @@ import platform
 import numpy as np
 from datetime import datetime
 
-import torch
-import torchvision as tv
-import torch.backends.cudnn as cudnn
+# import torch
+# import torchvision as tv
+# import torchvision.utils as vutils
+# import torch.backends.cudnn as cudnn
+
+import paddle
+import paddle.nn as nn
+import paddle.vision as pv
+import torchvision_paddle
+from torchvision_paddle.to_pil_image import to_pil_image
+import torchvision_paddle.utils as vutils
+
 
 # from torch.utils.tensorboard import SummaryWriter
 
 import yaml
 import matplotlib.pyplot as plt
 from easydict import EasyDict as edict
-import torchvision.utils as vutils
+
 
 
 ##### option parsing ######
@@ -71,23 +80,23 @@ def to_np(x):
     return x.cpu().numpy()
 
 
-def prepare_device(use_gpu, gpu_ids):
-    if use_gpu:
-        cudnn.benchmark = True
-        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        if isinstance(gpu_ids, str):
-            gpu_ids = [int(x) for x in gpu_ids.split(",")]
-            torch.cuda.set_device(gpu_ids[0])
-            device = torch.device("cuda:" + str(gpu_ids[0]))
-        else:
-            torch.cuda.set_device(gpu_ids)
-            device = torch.device("cuda:" + str(gpu_ids))
-        print("running on GPU {}".format(gpu_ids))
-    else:
-        device = torch.device("cpu")
-        print("running on CPU")
-
-    return device
+# def prepare_device(use_gpu, gpu_ids):
+#     if use_gpu:
+#         # cudnn.benchmark = True
+#         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+#         if isinstance(gpu_ids, str):
+#             gpu_ids = [int(x) for x in gpu_ids.split(",")]
+#             paddle.set_device(f"gpu:{gpu_ids[0]}")
+#             device = torch.device("cuda:" + str(gpu_ids[0]))
+#         else:
+#             torch.cuda.set_device(gpu_ids)
+#             device = torch.device("cuda:" + str(gpu_ids))
+#         print("running on GPU {}".format(gpu_ids))
+#     else:
+#         device = torch.device("cpu")
+#         print("running on CPU")
+#
+#     return device
 
 
 ###### file system ######
@@ -143,17 +152,17 @@ def clean_tensorboard(directory):
                 os.remove(tensorboard)
 
 
-def prepare_tensorboard(config, experiment_name=datetime.now().strftime("%Y-%m-%d %H-%M-%S")):
-    tensorboard_directory = os.path.join(config.checkpoint_dir, config.name, "tensorboard_logs")
-    mkdir_if_not(tensorboard_directory)
-    clean_tensorboard(tensorboard_directory)
-    tb_writer = SummaryWriter(os.path.join(tensorboard_directory, experiment_name), flush_secs=10)
-
-    # try:
-    #     shutil.copy('outputs/opt.txt', tensorboard_directory)
-    # except:
-    #     print('cannot find file opt.txt')
-    return tb_writer
+# def prepare_tensorboard(config, experiment_name=datetime.now().strftime("%Y-%m-%d %H-%M-%S")):
+#     tensorboard_directory = os.path.join(config.checkpoint_dir, config.name, "tensorboard_logs")
+#     mkdir_if_not(tensorboard_directory)
+#     clean_tensorboard(tensorboard_directory)
+#     # tb_writer = SummaryWriter(os.path.join(tensorboard_directory, experiment_name), flush_secs=10)
+#
+#     # try:
+#     #     shutil.copy('outputs/opt.txt', tensorboard_directory)
+#     # except:
+#     #     print('cannot find file opt.txt')
+#     return tb_writer
 
 
 def tb_loss_logger(tb_writer, iter_index, loss_logger):
@@ -168,10 +177,10 @@ def tb_image_logger(tb_writer, iter_index, images_info, config):
     for tag, image in images_info.items():
         if tag == "test_image_prediction" or tag == "image_prediction":
             continue
-        image = tv.utils.make_grid(image.cpu())
-        image = torch.clamp(image, 0, 1)
+        image = torchvision_paddle.utils.make_grid(image.cpu())
+        image = paddle.clip(image, 0, 1)
         tb_writer.add_image(tag, img_tensor=image, global_step=iter_index)
-        tv.transforms.functional.to_pil_image(image).save(
+        to_pil_image(image).save(
             os.path.join(tb_logger_path, "{:06d}_{}.jpg".format(iter_index, tag))
         )
 
@@ -184,13 +193,13 @@ def tb_image_logger_test(epoch, iter, images_info, config):
     scratch_img = images_info["test_scratch_image"].data.cpu()
     if config.norm_input:
         scratch_img = (scratch_img + 1.0) / 2.0
-    scratch_img = torch.clamp(scratch_img, 0, 1)
+    scratch_img = paddle.clip(scratch_img, 0, 1)
     gt_mask = images_info["test_mask_image"].data.cpu()
     predict_mask = images_info["test_scratch_prediction"].data.cpu()
 
     predict_hard_mask = (predict_mask.data.cpu() >= 0.5).float()
 
-    imgs = torch.cat((scratch_img, predict_hard_mask, gt_mask), 0)
+    imgs = paddle.concat((scratch_img, predict_hard_mask, gt_mask), 0)
     img_grid = vutils.save_image(
         imgs, os.path.join(url, str(iter) + ".jpg"), nrow=len(scratch_img), padding=0, normalize=True
     )
@@ -198,7 +207,7 @@ def tb_image_logger_test(epoch, iter, images_info, config):
 
 def imshow(input_image, title=None, to_numpy=False):
     inp = input_image
-    if to_numpy or type(input_image) is torch.Tensor:
+    if to_numpy or type(input_image) is paddle.Tensor:
         inp = input_image.numpy()
 
     fig = plt.figure()
@@ -216,11 +225,11 @@ def imshow(input_image, title=None, to_numpy=False):
 def vgg_preprocess(tensor):
     # input is RGB tensor which ranges in [0,1]
     # output is BGR tensor which ranges in [0,255]
-    tensor_bgr = torch.cat((tensor[:, 2:3, :, :], tensor[:, 1:2, :, :], tensor[:, 0:1, :, :]), dim=1)
+    tensor_bgr = paddle.concat((tensor[:, 2:3, :, :], tensor[:, 1:2, :, :], tensor[:, 0:1, :, :]), axis=1)
     # tensor_bgr = tensor[:, [2, 1, 0], ...]
-    tensor_bgr_ml = tensor_bgr - torch.Tensor([0.40760392, 0.45795686, 0.48501961]).type_as(tensor_bgr).view(
+    tensor_bgr_ml = tensor_bgr - paddle.Tensor([0.40760392, 0.45795686, 0.48501961]).type_as(tensor_bgr).reshape((
         1, 3, 1, 1
-    )
+    ))
     tensor_rst = tensor_bgr_ml * 255
     return tensor_rst
 
@@ -230,10 +239,9 @@ def torch_vgg_preprocess(tensor):
     # note that both input and output are RGB tensors;
     # input and output ranges in [0,1]
     # normalize the tensor with mean and variance
-    tensor_mc = tensor - torch.Tensor([0.485, 0.456, 0.406]).type_as(tensor).view(1, 3, 1, 1)
-    tensor_mc_norm = tensor_mc / torch.Tensor([0.229, 0.224, 0.225]).type_as(tensor_mc).view(1, 3, 1, 1)
+    tensor_mc = tensor - paddle.to_tensor([0.485, 0.456, 0.406],dtype=tensor.dtype).reshape((1, 3, 1, 1))
+    tensor_mc_norm = tensor_mc / paddle.to_tensor([0.229, 0.224, 0.225],dtype=tensor_mc.dtype).reshape((1, 3, 1, 1))
     return tensor_mc_norm
-
 
 def network_gradient(net, gradient_on=True):
     if gradient_on:

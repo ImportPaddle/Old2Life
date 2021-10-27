@@ -3,8 +3,9 @@
 
 import re
 import importlib
-import torch
+# import torch
 from argparse import Namespace
+import paddle
 import numpy as np
 from PIL import Image
 import os
@@ -167,8 +168,8 @@ def find_class_in_module(target_cls_name, module):
 def save_network(net, label, epoch, opt):
     save_filename = "%s_net_%s.pth" % (epoch, label)
     save_path = os.path.join(opt.checkpoints_dir, opt.name, save_filename)
-    torch.save(net.cpu().state_dict(), save_path)
-    if len(opt.gpu_ids) and torch.cuda.is_available():
+    paddle.save(net.cpu().state_dict(), save_path)
+    if len(opt.gpu_ids) and paddle.is_compiled_with_cuda():
         net.cuda()
 
 
@@ -177,7 +178,7 @@ def load_network(net, label, epoch, opt):
     save_dir = os.path.join(opt.checkpoints_dir, opt.name)
     save_path = os.path.join(save_dir, save_filename)
     if os.path.exists(save_path):
-        weights = torch.load(save_path)
+        weights = paddle.load(save_path)
         net.load_state_dict(weights)
     return net
 
@@ -194,12 +195,12 @@ def uint82bin(n, count=8):
 
 class Colorize(object):
     def __init__(self, n=35):
-        self.cmap = labelcolormap(n)
-        self.cmap = torch.from_numpy(self.cmap[:n])
+        self.cmap = labelcolormap(n) # todo 缺少labelcolormap
+        self.cmap = paddle.to_tensor(self.cmap[:n])
 
     def __call__(self, gray_image):
         size = gray_image.size()
-        color_image = torch.ByteTensor(3, size[1], size[2]).fill_(0)
+        color_image = paddle.to_tensor([3, size[1], size[2]],dtype=paddle.bool).fill(0) #todo 可能有问题
 
         for label in range(0, len(self.cmap)):
             mask = (label == gray_image[0]).cpu()

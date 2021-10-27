@@ -222,16 +222,16 @@ class Pix2PixModel(paddle.nn.layer):
             fake = []
             real = []
             for p in pred:
-                fake.append([tensor[: tensor.size(0) // 2] for tensor in p])
-                real.append([tensor[tensor.size(0) // 2 :] for tensor in p])
+                fake.append([tensor[: tensor.shape[0] // 2] for tensor in p])
+                real.append([tensor[tensor.shape[0] // 2 :] for tensor in p])
         else:
-            fake = pred[: pred.size(0) // 2]
-            real = pred[pred.size(0) // 2 :]
+            fake = pred[: pred.shape[0] // 2]
+            real = pred[pred.shape[0] // 2 :]
 
         return fake, real
 
     def get_edges(self, t):
-        edge = self.ByteTensor(t.size()).zero_()
+        edge = self.ByteTensor(t.shape).zero_()
         edge[:, :, :, 1:] = edge[:, :, :, 1:] | (t[:, :, :, 1:] != t[:, :, :, :-1])
         edge[:, :, :, :-1] = edge[:, :, :, :-1] | (t[:, :, :, 1:] != t[:, :, :, :-1])
         edge[:, :, 1:, :] = edge[:, :, 1:, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
