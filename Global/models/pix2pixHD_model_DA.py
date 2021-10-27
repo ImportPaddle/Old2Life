@@ -4,7 +4,7 @@
 import numpy as np
 # import torch
 import paddle
-from paddle.autograd import PyLayer
+# from paddle.autograd import PyLayer
 import os
 # from torch.autograd import PyLayer
 from Global.util.image_pool import ImagePool
@@ -301,7 +301,7 @@ class Pix2PixHDModel(BaseModel):
         return feat_map
 
     def encode_features(self, image, inst):
-        image = paddle.to_tensor(image, volatile=True)
+        image = paddle.to_tensor(image)
         feat_num = self.opt.feat_num
         h, w = inst.shape[2], inst.shape[3]
         block_num = 32
