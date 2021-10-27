@@ -1,7 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch.utils.data as data
+# import torch.utils.data as data
+from paddle.io import Dataset
 from PIL import Image
 import os
 
@@ -70,7 +71,7 @@ def default_loader(path):
     return Image.open(path).convert("RGB")
 
 
-class ImageFolder(data.Dataset):
+class ImageFolder(Dataset):
     def __init__(self, root, transform=None, return_paths=False, loader=default_loader):
         imgs = make_dataset(root)
         if len(imgs) == 0:

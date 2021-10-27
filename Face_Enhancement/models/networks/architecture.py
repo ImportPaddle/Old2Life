@@ -1,12 +1,17 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
-import torch.nn.utils.spectral_norm as spectral_norm
-from models.networks.normalization import SPADE
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# import torchvision
+# import torch.nn.utils.spectral_norm as spectral_norm
+import paddle
+import paddle.nn as nn
+from paddle.nn.utils.spectral_norm_hook import spectral_norm
+import paddle.nn.functional as F
+from Face_Enhancement.models.networks.normalization import SPADE
+from x2paddle import models
 
 
 # ResNet block that uses SPADE.
@@ -16,7 +21,7 @@ from models.networks.normalization import SPADE
 # This architecture seemed like a standard architecture for unconditional or
 # class-conditional GAN architecture using residual block.
 # The code was inspired from https://github.com/LMescheder/GAN_stability.
-class SPADEResnetBlock(nn.Module):
+class SPADEResnetBlock(nn.Layer):
     def __init__(self, fin, fout, opt):
         super().__init__()
         # Attributes
@@ -25,10 +30,10 @@ class SPADEResnetBlock(nn.Module):
 
         self.opt = opt
         # create conv layers
-        self.conv_0 = nn.Conv2d(fin, fmiddle, kernel_size=3, padding=1)
-        self.conv_1 = nn.Conv2d(fmiddle, fout, kernel_size=3, padding=1)
+        self.conv_0 = nn.Conv2D(fin, fmiddle, kernel_size=3, padding=1)
+        self.conv_1 = nn.Conv2D(fmiddle, fout, kernel_size=3, padding=1)
         if self.learned_shortcut:
-            self.conv_s = nn.Conv2d(fin, fout, kernel_size=1, bias=False)
+            self.conv_s = nn.Conv2D(fin, fout, kernel_size=1, bias_attr=False)
 
         # apply spectral norm if specified
         if "spectral" in opt.norm_G:
@@ -69,17 +74,17 @@ class SPADEResnetBlock(nn.Module):
 
 # ResNet block used in pix2pixHD
 # We keep the same architecture as pix2pixHD.
-class ResnetBlock(nn.Module):
+class ResnetBlock(nn.Layer):
     def __init__(self, dim, norm_layer, activation=nn.ReLU(False), kernel_size=3):
         super().__init__()
 
         pw = (kernel_size - 1) // 2
         self.conv_block = nn.Sequential(
-            nn.ReflectionPad2d(pw),
-            norm_layer(nn.Conv2d(dim, dim, kernel_size=kernel_size)),
+            nn.Pad2D(pw),
+            norm_layer(nn.Conv2D(dim, dim, kernel_size=kernel_size)),
             activation,
-            nn.ReflectionPad2d(pw),
-            norm_layer(nn.Conv2d(dim, dim, kernel_size=kernel_size)),
+            nn.Pad2D(pw),
+            norm_layer(nn.Conv2D(dim, dim, kernel_size=kernel_size)),
         )
 
     def forward(self, x):
@@ -89,15 +94,15 @@ class ResnetBlock(nn.Module):
 
 
 # VGG architecter, used for the perceptual loss using a pretrained VGG network
-class VGG19(torch.nn.Module):
+class VGG19(nn.Layer):
     def __init__(self, requires_grad=False):
         super().__init__()
-        vgg_pretrained_features = torchvision.models.vgg19(pretrained=True).features
-        self.slice1 = torch.nn.Sequential()
-        self.slice2 = torch.nn.Sequential()
-        self.slice3 = torch.nn.Sequential()
-        self.slice4 = torch.nn.Sequential()
-        self.slice5 = torch.nn.Sequential()
+        vgg_pretrained_features = models.vgg19_pth(pretrained=True).features # todo 有个bn版
+        self.slice1 = nn.Sequential()
+        self.slice2 = nn.Sequential()
+        self.slice3 = nn.Sequential()
+        self.slice4 = nn.Sequential()
+        self.slice5 = nn.Sequential()
         for x in range(2):
             self.slice1.add_module(str(x), vgg_pretrained_features[x])
         for x in range(2, 7):
@@ -122,7 +127,7 @@ class VGG19(torch.nn.Module):
         return out
 
 
-class SPADEResnetBlock_non_spade(nn.Module):
+class SPADEResnetBlock_non_spade(nn.Layer):
     def __init__(self, fin, fout, opt):
         super().__init__()
         # Attributes
@@ -131,10 +136,10 @@ class SPADEResnetBlock_non_spade(nn.Module):
 
         self.opt = opt
         # create conv layers
-        self.conv_0 = nn.Conv2d(fin, fmiddle, kernel_size=3, padding=1)
-        self.conv_1 = nn.Conv2d(fmiddle, fout, kernel_size=3, padding=1)
+        self.conv_0 = nn.Conv2D(fin, fmiddle, kernel_size=3, padding=1)
+        self.conv_1 = nn.Conv2D(fmiddle, fout, kernel_size=3, padding=1)
         if self.learned_shortcut:
-            self.conv_s = nn.Conv2d(fin, fout, kernel_size=1, bias=False)
+            self.conv_s = nn.Conv2D(fin, fout, kernel_size=1, bias_attr=False)
 
         # apply spectral norm if specified
         if "spectral" in opt.norm_G:

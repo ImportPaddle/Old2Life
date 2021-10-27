@@ -2,13 +2,14 @@
 # Licensed under the MIT License.
 
 import os
-from collections import OrderedDict
+# from collections import OrderedDict
 
 import data
 from options.test_options import TestOptions
 from models.pix2pix_model import Pix2PixModel
 from util.visualizer import Visualizer
-import torchvision.utils as vutils
+# import torchvision.utils as vutils
+import torchvision_paddle.utils as vutils
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 

@@ -1,11 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-from data.base_dataset import BaseDataset, get_params, get_transform
+from base_dataset import BaseDataset, get_params, get_transform
 from PIL import Image
-import util.util as util
+# import Face_Enhancement.util.util as util
 import os
-import torch
+# import torch
+import paddle
 
 
 class FaceTestDataset(BaseDataset):
@@ -83,11 +84,11 @@ class FaceTestDataset(BaseDataset):
                 label_tensor = transform_label(label)  ## 3 channels and pixel [0,1]
                 full_label.append(label_tensor[0])
             else:
-                current_part = torch.zeros((self.opt.load_size, self.opt.load_size))
+                current_part = paddle.zeros((self.opt.load_size, self.opt.load_size))
                 full_label.append(current_part)
                 cnt += 1
 
-        full_label_tensor = torch.stack(full_label, 0)
+        full_label_tensor = paddle.stack(full_label, 0)
 
         input_dict = {
             "label": full_label_tensor,

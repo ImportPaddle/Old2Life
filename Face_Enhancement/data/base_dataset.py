@@ -1,14 +1,20 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch.utils.data as data
+# import torch.utils.data as data
+# import torchvision.transforms as transforms
+
+# import paddle
+from paddle.io import Dataset
+import paddle.vision.transforms as transforms
+from torchvision_paddle.Lambda import Lambda
+
 from PIL import Image
-import torchvision.transforms as transforms
 import numpy as np
 import random
 
 
-class BaseDataset(data.Dataset):
+class BaseDataset(Dataset):
     def __init__(self):
         super(BaseDataset, self).__init__()
 
@@ -48,24 +54,24 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True, toTensor=Tr
         osize = [opt.load_size, opt.load_size]
         transform_list.append(transforms.Resize(osize, interpolation=method))
     elif "scale_width" in opt.preprocess_mode:
-        transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.load_size, method)))
+        transform_list.append(Lambda(lambda img: __scale_width(img, opt.load_size, method)))
     elif "scale_shortside" in opt.preprocess_mode:
-        transform_list.append(transforms.Lambda(lambda img: __scale_shortside(img, opt.load_size, method)))
+        transform_list.append(Lambda(lambda img: __scale_shortside(img, opt.load_size, method)))
 
     if "crop" in opt.preprocess_mode:
-        transform_list.append(transforms.Lambda(lambda img: __crop(img, params["crop_pos"], opt.crop_size)))
+        transform_list.append(Lambda(lambda img: __crop(img, params["crop_pos"], opt.crop_size)))
 
     if opt.preprocess_mode == "none":
         base = 32
-        transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base, method)))
+        transform_list.append(Lambda(lambda img: __make_power_2(img, base, method)))
 
     if opt.preprocess_mode == "fixed":
         w = opt.crop_size
         h = round(opt.crop_size / opt.aspect_ratio)
-        transform_list.append(transforms.Lambda(lambda img: __resize(img, w, h, method)))
+        transform_list.append(Lambda(lambda img: __resize(img, w, h, method)))
 
     if opt.isTrain and not opt.no_flip:
-        transform_list.append(transforms.Lambda(lambda img: __flip(img, params["flip"])))
+        transform_list.append(Lambda(lambda img: __flip(img, params["flip"])))
 
     if toTensor:
         transform_list += [transforms.ToTensor()]

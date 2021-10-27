@@ -2,9 +2,10 @@
 # Licensed under the MIT License.
 
 import importlib
-import torch.utils.data
-from data.base_dataset import BaseDataset
-from data.face_dataset import FaceTestDataset
+# import torch.utils.data
+import paddle
+from base_dataset import BaseDataset
+from face_dataset import FaceTestDataset
 
 
 def create_dataloader(opt):
@@ -12,7 +13,7 @@ def create_dataloader(opt):
     instance = FaceTestDataset()
     instance.initialize(opt)
     print("dataset [%s] of size %d was created" % (type(instance).__name__, len(instance)))
-    dataloader = torch.utils.data.DataLoader(
+    dataloader = paddle.io.DataLoader(
         instance,
         batch_size=opt.batchSize,
         shuffle=not opt.serial_batches,

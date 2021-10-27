@@ -2,11 +2,60 @@
 # Licensed under the MIT License.
 
 import re
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# import torch.nn.utils.spectral_norm as spectral_norm
+
+import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
+from paddle.nn.utils.spectral_norm_hook import spectral_norm
 from models.networks.sync_batchnorm import SynchronizedBatchNorm2d
-import torch.nn.utils.spectral_norm as spectral_norm
+
+class BatchNorm2D(paddle.nn.BatchNorm2D):
+    def __init__(self,
+                 num_features,
+                 eps=1e-05,
+                 momentum=0.1,
+                 affine=True,
+                 track_running_stats=True):
+        momentum = 1 - momentum
+        weight_attr = None
+        bias_attr = None
+        if not affine:
+            weight_attr = paddle.ParamAttr(learning_rate=0.0)
+            bias_attr = paddle.ParamAttr(learning_rate=0.0)
+        super().__init__(
+            num_features,
+            momentum=momentum,
+            epsilon=eps,
+            weight_attr=weight_attr,
+            bias_attr=bias_attr,
+            use_global_stats=track_running_stats)
+
+
+class InstanceNorm2D(paddle.nn.InstanceNorm2D):
+    def __init__(self,
+                 num_features,
+                 eps=1e-05,
+                 momentum=0.9,
+                 affine=True,
+                 ):
+        momentum = 1 - momentum
+        weight_attr = None
+        bias_attr = None
+        if not affine:
+            weight_attr = paddle.ParamAttr(learning_rate=0.0)
+            bias_attr = paddle.ParamAttr(learning_rate=0.0)
+        super().__init__(
+            num_features,
+            momentum=momentum,
+            epsilon=eps,
+            weight_attr=weight_attr,
+            bias_attr=bias_attr,)
+
+
 
 
 def get_nonspade_norm_layer(opt, norm_type="instance"):
@@ -14,7 +63,7 @@ def get_nonspade_norm_layer(opt, norm_type="instance"):
     def get_out_channel(layer):
         if hasattr(layer, "out_channels"):
             return getattr(layer, "out_channels")
-        return layer.weight.size(0)
+        return layer.weight.shape[0]
 
     # this function will be returned
     def add_norm_layer(layer):
@@ -33,11 +82,11 @@ def get_nonspade_norm_layer(opt, norm_type="instance"):
             layer.register_parameter("bias", None)
 
         if subnorm_type == "batch":
-            norm_layer = nn.BatchNorm2d(get_out_channel(layer), affine=True)
+            norm_layer = BatchNorm2D(get_out_channel(layer), affine=True)
         elif subnorm_type == "sync_batch":
             norm_layer = SynchronizedBatchNorm2d(get_out_channel(layer), affine=True)
         elif subnorm_type == "instance":
-            norm_layer = nn.InstanceNorm2d(get_out_channel(layer), affine=False)
+            norm_layer = InstanceNorm2D(get_out_channel(layer), affine=False)
         else:
             raise ValueError("normalization layer %s is not recognized" % subnorm_type)
 
@@ -46,7 +95,7 @@ def get_nonspade_norm_layer(opt, norm_type="instance"):
     return add_norm_layer
 
 
-class SPADE(nn.Module):
+class SPADE(nn.Layer):
     def __init__(self, config_text, norm_nc, label_nc, opt):
         super().__init__()
 
@@ -56,11 +105,11 @@ class SPADE(nn.Module):
         ks = int(parsed.group(2))
         self.opt = opt
         if param_free_norm_type == "instance":
-            self.param_free_norm = nn.InstanceNorm2d(norm_nc, affine=False)
+            self.param_free_norm = InstanceNorm2D(norm_nc, affine=False)
         elif param_free_norm_type == "syncbatch":
             self.param_free_norm = SynchronizedBatchNorm2d(norm_nc, affine=False)
         elif param_free_norm_type == "batch":
-            self.param_free_norm = nn.BatchNorm2d(norm_nc, affine=False)
+            self.param_free_norm = BatchNorm2D(norm_nc, affine=False)
         else:
             raise ValueError("%s is not a recognized param-free norm type in SPADE" % param_free_norm_type)
 
@@ -70,13 +119,13 @@ class SPADE(nn.Module):
         pw = ks // 2
 
         if self.opt.no_parsing_map:
-            self.mlp_shared = nn.Sequential(nn.Conv2d(3, nhidden, kernel_size=ks, padding=pw), nn.ReLU())
+            self.mlp_shared = nn.Sequential(nn.Conv2D(3, nhidden, kernel_size=ks, padding=pw), nn.ReLU())
         else:
             self.mlp_shared = nn.Sequential(
-                nn.Conv2d(label_nc + 3, nhidden, kernel_size=ks, padding=pw), nn.ReLU()
+                nn.Conv2D(label_nc + 3, nhidden, kernel_size=ks, padding=pw), nn.ReLU()
             )
-        self.mlp_gamma = nn.Conv2d(nhidden, norm_nc, kernel_size=ks, padding=pw)
-        self.mlp_beta = nn.Conv2d(nhidden, norm_nc, kernel_size=ks, padding=pw)
+        self.mlp_gamma = nn.Conv2D(nhidden, norm_nc, kernel_size=ks, padding=pw)
+        self.mlp_beta = nn.Conv2D(nhidden, norm_nc, kernel_size=ks, padding=pw)
 
     def forward(self, x, segmap, degraded_image):
 
@@ -84,13 +133,13 @@ class SPADE(nn.Module):
         normalized = self.param_free_norm(x)
 
         # Part 2. produce scaling and bias conditioned on semantic map
-        segmap = F.interpolate(segmap, size=x.size()[2:], mode="nearest")
-        degraded_face = F.interpolate(degraded_image, size=x.size()[2:], mode="bilinear")
+        segmap = F.interpolate(segmap, size=x.shape[2:], mode="nearest")
+        degraded_face = F.interpolate(degraded_image, size=x.shape[2:], mode="bilinear")
 
         if self.opt.no_parsing_map:
             actv = self.mlp_shared(degraded_face)
         else:
-            actv = self.mlp_shared(torch.cat((segmap, degraded_face), dim=1))
+            actv = self.mlp_shared(paddle.concat((segmap, degraded_face), axis=1))
         gamma = self.mlp_gamma(actv)
         beta = self.mlp_beta(actv)
 

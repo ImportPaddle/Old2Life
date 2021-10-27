@@ -1,12 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
-import models.networks as networks
-import util.util as util
+# import torch
+import paddle
+import Face_Enhancement.models.networks as networks
+import Face_Enhancement.util.util as util
 
 
-class Pix2PixModel(torch.nn.Module):
+class Pix2PixModel(paddle.nn.layer):
     @staticmethod
     def modify_commandline_options(parser, is_train):
         networks.modify_commandline_options(parser, is_train)
@@ -15,15 +16,15 @@ class Pix2PixModel(torch.nn.Module):
     def __init__(self, opt):
         super().__init__()
         self.opt = opt
-        self.FloatTensor = torch.cuda.FloatTensor if self.use_gpu() else torch.FloatTensor
-        self.ByteTensor = torch.cuda.ByteTensor if self.use_gpu() else torch.ByteTensor
+        self.FloatTensor = paddle.float32
+        self.ByteTensor = paddle.bool# todo 注意 torch.ByteTensor
 
         self.netG, self.netD, self.netE = self.initialize_networks(opt)
 
         # set loss functions
         if opt.isTrain:
             self.criterionGAN = networks.GANLoss(opt.gan_mode, tensor=self.FloatTensor, opt=self.opt)
-            self.criterionFeat = torch.nn.L1Loss()
+            self.criterionFeat = paddle.nn.L1Loss()
             if not opt.no_vgg_loss:
                 self.criterionVGG = networks.VGGLoss(self.opt.gpu_ids)
             if opt.use_vae:
@@ -46,7 +47,7 @@ class Pix2PixModel(torch.nn.Module):
             z, mu, logvar = self.encode_z(real_image)
             return mu, logvar
         elif mode == "inference":
-            with torch.no_grad():
+            with paddle.no_grad():
                 fake_image, _ = self.generate_fake(input_semantics, degraded_image, real_image)
             return fake_image
         else:
@@ -65,8 +66,8 @@ class Pix2PixModel(torch.nn.Module):
         else:
             G_lr, D_lr = opt.lr / 2, opt.lr * 2
 
-        optimizer_G = torch.optim.Adam(G_params, lr=G_lr, betas=(beta1, beta2))
-        optimizer_D = torch.optim.Adam(D_params, lr=D_lr, betas=(beta1, beta2))
+        optimizer_G = paddle.optimizer.Adam(parameters=G_params, learning_rate=G_lr, beta1=beta1, beta2=beta2)
+        optimizer_D = paddle.optimizer.Adam(parameters=D_params, learning_rate=D_lr, beta1=beta1, beta2=beta2)
 
         return optimizer_G, optimizer_D
 
@@ -156,7 +157,7 @@ class Pix2PixModel(torch.nn.Module):
 
     def compute_discriminator_loss(self, input_semantics, degraded_image, real_image):
         D_losses = {}
-        with torch.no_grad():
+        with paddle.no_grad():
             fake_image, _ = self.generate_fake(input_semantics, degraded_image, real_image)
             fake_image = fake_image.detach()
             fake_image.requires_grad_()
@@ -198,14 +199,14 @@ class Pix2PixModel(torch.nn.Module):
             fake_concat = fake_image
             real_concat = real_image
         else:
-            fake_concat = torch.cat([input_semantics, fake_image], dim=1)
-            real_concat = torch.cat([input_semantics, real_image], dim=1)
+            fake_concat = paddle.concat([input_semantics, fake_image], axis=1)
+            real_concat = paddle.concat([input_semantics, real_image], axis=1)
 
         # In Batch Normalization, the fake and real images are
         # recommended to be in the same batch to avoid disparate
         # statistics in fake and real images.
         # So both fake and real images are fed to D all at once.
-        fake_and_real = torch.cat([fake_concat, real_concat], dim=0)
+        fake_and_real = paddle.concat([fake_concat, real_concat], axis=0)
 
         discriminator_out = self.netD(fake_and_real)
 
@@ -238,8 +239,8 @@ class Pix2PixModel(torch.nn.Module):
         return edge.float()
 
     def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
+        std = paddle.exp(0.5 * logvar)
+        eps = paddle.randn(std.shape)
         return eps.mul(std) + mu
 
     def use_gpu(self):

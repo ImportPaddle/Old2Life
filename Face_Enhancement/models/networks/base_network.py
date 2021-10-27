@@ -1,11 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch.nn as nn
-from torch.nn import init
+# import torch.nn as nn
+# from torch.nn import init
+import paddle.nn as nn
+import initializer as init
 
 
-class BaseNetwork(nn.Module):
+class BaseNetwork(nn.Layer):
     def __init__(self):
         super(BaseNetwork, self).__init__()
 

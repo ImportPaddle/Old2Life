@@ -1,11 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from models.networks.base_network import BaseNetwork
-from models.networks.normalization import get_nonspade_norm_layer
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
+from Face_Enhancement.models.networks.base_network import BaseNetwork
+from Face_Enhancement.models.networks.normalization import get_nonspade_norm_layer
 from models.networks.architecture import ResnetBlock as ResnetBlock
 from models.networks.architecture import SPADEResnetBlock as SPADEResnetBlock
 from models.networks.architecture import SPADEResnetBlock_non_spade as SPADEResnetBlock_non_spade
@@ -40,9 +43,9 @@ class SPADEGenerator(BaseNetwork):
             # Otherwise, we make the network deterministic by starting with
             # downsampled segmentation map instead of random z
             if self.opt.no_parsing_map:
-                self.fc = nn.Conv2d(3, 16 * nf, 3, padding=1)
+                self.fc = nn.Conv2D(3, 16 * nf, 3, padding=1)
             else:
-                self.fc = nn.Conv2d(self.opt.semantic_nc, 16 * nf, 3, padding=1)
+                self.fc = nn.Conv2D(self.opt.semantic_nc, 16 * nf, 3, padding=1)
 
         if self.opt.injection_layer == "all" or self.opt.injection_layer == "1":
             self.head_0 = SPADEResnetBlock(16 * nf, 16 * nf, opt)
@@ -83,7 +86,7 @@ class SPADEGenerator(BaseNetwork):
             self.up_4 = SPADEResnetBlock(1 * nf, nf // 2, opt)
             final_nc = nf // 2
 
-        self.conv_img = nn.Conv2d(final_nc, 3, 3, padding=1)
+        self.conv_img = nn.Conv2D(final_nc, 3, 3, padding=1)
 
         self.up = nn.Upsample(scale_factor=2)
 
@@ -108,9 +111,9 @@ class SPADEGenerator(BaseNetwork):
         if self.opt.use_vae:
             # we sample z from unit normal and reshape the tensor
             if z is None:
-                z = torch.randn(input.size(0), self.opt.z_dim, dtype=torch.float32, device=input.get_device())
+                z = paddle.randn([input.shape[0], self.opt.z_dim], dtype=paddle.float32)
             x = self.fc(z)
-            x = x.view(-1, 16 * self.opt.ngf, self.sh, self.sw)
+            x = x.reshape([-1, 16 * self.opt.ngf, self.sh, self.sw])
         else:
             # we downsample segmap and run convolution
             if self.opt.no_parsing_map:
@@ -182,8 +185,8 @@ class Pix2PixHDGenerator(BaseNetwork):
 
         # initial conv
         model += [
-            nn.ReflectionPad2d(opt.resnet_initial_kernel_size // 2),
-            norm_layer(nn.Conv2d(input_nc, opt.ngf, kernel_size=opt.resnet_initial_kernel_size, padding=0)),
+            nn.Pad2D(opt.resnet_initial_kernel_size // 2),
+            norm_layer(nn.Conv2D(input_nc, opt.ngf, kernel_size=opt.resnet_initial_kernel_size, padding=0)),
             activation,
         ]
 
@@ -191,7 +194,7 @@ class Pix2PixHDGenerator(BaseNetwork):
         mult = 1
         for i in range(opt.resnet_n_downsample):
             model += [
-                norm_layer(nn.Conv2d(opt.ngf * mult, opt.ngf * mult * 2, kernel_size=3, stride=2, padding=1)),
+                norm_layer(nn.Conv2D(opt.ngf * mult, opt.ngf * mult * 2, kernel_size=3, stride=2, padding=1)),
                 activation,
             ]
             mult *= 2
@@ -213,7 +216,7 @@ class Pix2PixHDGenerator(BaseNetwork):
             nc_out = int((opt.ngf * mult) / 2)
             model += [
                 norm_layer(
-                    nn.ConvTranspose2d(nc_in, nc_out, kernel_size=3, stride=2, padding=1, output_padding=1)
+                    nn.Conv2DTranspose(nc_in, nc_out, kernel_size=3, stride=2, padding=1, output_padding=1)
                 ),
                 activation,
             ]
@@ -221,8 +224,8 @@ class Pix2PixHDGenerator(BaseNetwork):
 
         # final output conv
         model += [
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(nc_out, opt.output_nc, kernel_size=7, padding=0),
+            nn.Pad2D(3),
+            nn.Conv2D(nc_out, opt.output_nc, kernel_size=7, padding=0),
             nn.Tanh(),
         ]
 

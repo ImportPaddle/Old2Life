@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
+# import torch
 import numpy as np
 import skimage.io as io
 
@@ -11,9 +11,9 @@ from matplotlib.patches import Rectangle
 from skimage.transform import SimilarityTransform
 from skimage.transform import warp
 from PIL import Image, ImageFilter
-import torch.nn.functional as F
-import torchvision as tv
-import torchvision.utils as vutils
+# import torch.nn.functional as F
+# import torchvision as tv
+# import torchvision.utils as vutils
 import time
 import cv2
 import os

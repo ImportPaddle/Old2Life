@@ -1,11 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
-from models.networks.base_network import BaseNetwork
-from models.networks.generator import *
-from models.networks.encoder import *
-import util.util as util
+# import torch
+import paddle
+from Face_Enhancement.models.networks.base_network import BaseNetwork
+from Face_Enhancement.models.networks.generator import *
+from Face_Enhancement.models.networks.encoder import *
+import Face_Enhancement.util.util as util
 
 
 def find_network_using_name(target_network_name, filename):
@@ -36,7 +37,7 @@ def create_network(cls, opt):
     net = cls(opt)
     net.print_network()
     if len(opt.gpu_ids) > 0:
-        assert torch.cuda.is_available()
+        assert paddle.is_compiled_with_cuda()
         net.cuda()
     net.init_weights(opt.init_type, opt.init_variance)
     return net
