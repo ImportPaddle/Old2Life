@@ -36,7 +36,7 @@ class ConvEncoder(BaseNetwork):
         self.opt = opt
 
     def forward(self, x):
-        if x.size[2] != 256 or x.size[3] != 256:
+        if x.shape[2] != 256 or x.shape[3] != 256:
             x = F.interpolate(x, size=[256, 256], mode="bilinear")
 
         x = self.layer1(x)

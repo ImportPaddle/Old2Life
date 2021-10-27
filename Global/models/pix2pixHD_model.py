@@ -2,11 +2,13 @@
 # Licensed under the MIT License.
 
 import numpy as np
-import torch
+# import torch
+import paddle
 import os
-from torch.autograd import Variable
-from util.image_pool import ImagePool
-from .base_model import BaseModel
+from paddle.autograd import PyLayer
+# from torch.autograd import Variable
+from Global.util.image_pool import ImagePool
+from base_model import BaseModel
 from . import networks
 
 class Pix2PixHDModel(BaseModel):
@@ -21,8 +23,6 @@ class Pix2PixHDModel(BaseModel):
     
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
-        if opt.resize_or_crop != 'none' or not opt.isTrain: # when training at full res this causes OOM
-            torch.backends.cudnn.benchmark = True
         self.isTrain = opt.isTrain
         self.use_features = opt.instance_feat or opt.label_feat   ## Clearly it is false
         self.gen_features = self.use_features and not self.opt.load_features ## it is also false
@@ -76,7 +76,7 @@ class Pix2PixHDModel(BaseModel):
             self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss, opt.Smooth_L1)
             
             self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)   
-            self.criterionFeat = torch.nn.L1Loss()
+            self.criterionFeat = paddle.nn.L1Loss()
 
             # self.criterionImage = torch.nn.SmoothL1Loss()
             if not opt.no_vgg_loss:
@@ -90,18 +90,18 @@ class Pix2PixHDModel(BaseModel):
             params = list(self.netG.parameters())
             if self.gen_features:              
                 params += list(self.netE.parameters())         
-            self.optimizer_G = torch.optim.Adam(params, lr=opt.lr, betas=(opt.beta1, 0.999))                            
+            self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1, beta2=0.999)
 
             # optimizer D                        
             params = list(self.netD.parameters())    
-            self.optimizer_D = torch.optim.Adam(params, lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_D = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1, beta2=0.999)
 
             print("---------- Optimizers initialized -------------")
 
             if opt.continue_train:
                 self.load_optimizer(self.optimizer_D, 'D', opt.which_epoch)
                 self.load_optimizer(self.optimizer_G, "G", opt.which_epoch)
-                for param_groups in self.optimizer_D.param_groups:
+                for param_groups in self.optimizer_D._parameter_list:
                     self.old_lr=param_groups['lr']
 
                 print("---------- Optimizers reloaded -------------")
@@ -114,9 +114,10 @@ class Pix2PixHDModel(BaseModel):
             input_label = label_map.data.cuda()
         else:
             # create one-hot vector for label map 
-            size = label_map.size()
+            size = label_map.shape
             oneHot_size = (size[0], self.opt.label_nc, size[2], size[3])
-            input_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
+            # input_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
+            input_label=paddle.zeros(oneHot_size,dtype=paddle.float32)
             input_label = input_label.scatter_(1, label_map.data.long().cuda(), 1.0)
             if self.opt.data_type == 16:
                 input_label = input_label.half()
@@ -125,18 +126,18 @@ class Pix2PixHDModel(BaseModel):
         if not self.opt.no_instance:
             inst_map = inst_map.data.cuda()
             edge_map = self.get_edges(inst_map)
-            input_label = torch.cat((input_label, edge_map), dim=1)         
-        input_label = Variable(input_label, volatile=infer)
+            input_label = paddle.concat((input_label, edge_map), axis=1)
+        input_label = paddle.to_tensor(input_label,stop_gradient=False)
 
         # real images for training
         if real_image is not None:
-            real_image = Variable(real_image.data.cuda())
+            real_image = paddle.to_tensor(real_image,stop_gradient=False)
 
         # instance map for feature encoding
         if self.use_features:
             # get precomputed feature maps
             if self.opt.load_features:
-                feat_map = Variable(feat_map.data.cuda())
+                feat_map = paddle.to_tensor(feat_map,stop_gradient=False)
             if self.opt.label_feat:
                 inst_map = label_map.cuda()
 
@@ -146,7 +147,7 @@ class Pix2PixHDModel(BaseModel):
         if input_label is None:
             input_concat = test_image.detach()
         else:
-            input_concat = torch.cat((input_label, test_image.detach()), dim=1)
+            input_concat = paddle.concat((input_label, test_image.detach()), axis=1)
         if use_pool:            
             fake_query = self.fake_pool.query(input_concat)
             return self.netD.forward(fake_query)
@@ -161,11 +162,11 @@ class Pix2PixHDModel(BaseModel):
         if self.use_features:
             if not self.opt.load_features:
                 feat_map = self.netE.forward(real_image, inst_map)                     
-            input_concat = torch.cat((input_label, feat_map), dim=1)                        
+            input_concat = paddle.concat((input_label, feat_map), axis=1)
         else:
             input_concat = input_label
         hiddens = self.netG.forward(input_concat, 'enc')
-        noise = Variable(torch.randn(hiddens.size()).cuda(hiddens.data.get_device()))
+        noise = paddle.to_tensor(paddle.randn(hiddens.shape),stop_gradient=False)
         # This is a reduced VAE implementation where we assume the outputs are multivariate Gaussian distribution with mean = hiddens and std_dev = all ones.
         # We follow the the VAE of MUNIT (https://github.com/NVlabs/MUNIT/blob/master/networks.py)
         fake_image = self.netG.forward(hiddens + noise, 'dec')
@@ -192,11 +193,11 @@ class Pix2PixHDModel(BaseModel):
             loss_D_real = self.criterionGAN(pred_real, True)
 
             # GAN loss (Fake Passability Loss)        
-            pred_fake = self.netD.forward(torch.cat((input_label, fake_image), dim=1))        
+            pred_fake = self.netD.forward(paddle.concat((input_label, fake_image), axis=1))
             loss_G_GAN = self.criterionGAN(pred_fake, True) 
         
         
-        loss_G_kl = torch.mean(torch.pow(hiddens, 2)) * self.opt.kl
+        loss_G_kl = paddle.mean(paddle.pow(hiddens, 2)) * self.opt.kl
 
         # GAN feature matching loss
         loss_G_GAN_Feat = 0
@@ -220,8 +221,8 @@ class Pix2PixHDModel(BaseModel):
 
     def inference(self, label, inst, image=None, feat=None):
         # Encode Inputs        
-        image = Variable(image) if image is not None else None
-        input_label, inst_map, real_image, _ = self.encode_input(Variable(label), Variable(inst), image, infer=True)
+        image = paddle.to_tensor(image,stop_gradient=False) if image is not None else None
+        input_label, inst_map, real_image, _ = self.encode_input(paddle.to_tensor(label,stop_gradient=False), paddle.to_tensor(inst,stop_gradient=False), image, infer=True)
 
         # Fake Generation
         if self.use_features:
@@ -231,12 +232,12 @@ class Pix2PixHDModel(BaseModel):
             else:
                 # sample clusters from precomputed features             
                 feat_map = self.sample_features(inst_map)
-            input_concat = torch.cat((input_label, feat_map), dim=1)
+            input_concat = paddle.concat((input_label, feat_map), axis=1)
         else:
             input_concat = input_label        
-           
-        if torch.__version__.startswith('0.4'):
-            with torch.no_grad():
+
+        if paddle.__version__.startswith('0.4'):
+            with paddle.no_grad():
                 fake_image = self.netG.forward(input_concat)
         else:
             fake_image = self.netG.forward(input_concat)
@@ -249,7 +250,7 @@ class Pix2PixHDModel(BaseModel):
 
         # randomly sample from the feature clusters
         inst_np = inst.cpu().numpy().astype(int)                                      
-        feat_map = self.Tensor(inst.size()[0], self.opt.feat_num, inst.size()[2], inst.size()[3])
+        feat_map = self.Tensor(inst.shape[0], self.opt.feat_num, inst.shape[2], inst.shape[3])
         for i in np.unique(inst_np):    
             label = i if i < 1000 else i//1000
             if label in features_clustered:
@@ -264,9 +265,9 @@ class Pix2PixHDModel(BaseModel):
         return feat_map
 
     def encode_features(self, image, inst):
-        image = Variable(image.cuda(), volatile=True)
+        image = paddle.to_tensor(image, stop_gradient=False,volatile=True)
         feat_num = self.opt.feat_num
-        h, w = inst.size()[2], inst.size()[3]
+        h, w = inst.shape[2], inst.shape[3]
         block_num = 32
         feat_map = self.netE.forward(image, inst.cuda())
         inst_np = inst.cpu().numpy().astype(int)
@@ -276,7 +277,7 @@ class Pix2PixHDModel(BaseModel):
         for i in np.unique(inst_np):
             label = i if i < 1000 else i//1000
             idx = (inst == int(i)).nonzero()
-            num = idx.size()[0]
+            num = idx.shape[0]
             idx = idx[num//2,:]
             val = np.zeros((1, feat_num+1))                        
             for k in range(feat_num):
@@ -286,7 +287,7 @@ class Pix2PixHDModel(BaseModel):
         return feature
 
     def get_edges(self, t):
-        edge = torch.cuda.ByteTensor(t.size()).zero_()
+        edge = paddle.zeros_like(t,dtype=paddle.uint8)
         edge[:,:,:,1:] = edge[:,:,:,1:] | (t[:,:,:,1:] != t[:,:,:,:-1])
         edge[:,:,:,:-1] = edge[:,:,:,:-1] | (t[:,:,:,1:] != t[:,:,:,:-1])
         edge[:,:,1:,:] = edge[:,:,1:,:] | (t[:,:,1:,:] != t[:,:,:-1,:])
@@ -311,16 +312,16 @@ class Pix2PixHDModel(BaseModel):
         params = list(self.netG.parameters())
         if self.gen_features:
             params += list(self.netE.parameters())           
-        self.optimizer_G = torch.optim.Adam(params, lr=self.opt.lr, betas=(self.opt.beta1, 0.999))
+        self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=self.opt.lr, beta1=self.opt.beta1, beta2=0.999)
         if self.opt.verbose:
             print('------------ Now also finetuning global generator -----------')
 
     def update_learning_rate(self):
         lrd = self.opt.lr / self.opt.niter_decay
         lr = self.old_lr - lrd        
-        for param_group in self.optimizer_D.param_groups:
+        for param_group in self.optimizer_D._parameter_list:
             param_group['lr'] = lr
-        for param_group in self.optimizer_G.param_groups:
+        for param_group in self.optimizer_G._parameter_list:
             param_group['lr'] = lr
         if self.opt.verbose:
             print('update learning rate: %f -> %f' % (self.old_lr, lr))

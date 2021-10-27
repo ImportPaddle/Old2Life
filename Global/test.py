@@ -3,21 +3,24 @@
 
 import os
 from collections import OrderedDict
-from torch.autograd import Variable
+# from torch.autograd import Variable
 from options.test_options import TestOptions
 from models.models import create_model
 from models.mapping_model import Pix2PixHDModel_Mapping
 import util.util as util
 from PIL import Image
-import torch
-import torchvision.utils as vutils
-import torchvision.transforms as transforms
+# import torch
+# import torchvision.utils as vutils
+# import torchvision.transforms as transforms
+import paddle
+import torchvision_paddle.utils as vutils
+import paddle.vision.transforms as transforms
 import numpy as np
 import cv2
 
 def data_transforms(img, method=Image.BILINEAR, scale=False):
 
-    ow, oh = img.size
+    ow, oh = img.shape
     pw, ph = ow, oh
     if scale == True:
         if ow < oh:
@@ -37,10 +40,10 @@ def data_transforms(img, method=Image.BILINEAR, scale=False):
 
 
 def data_transforms_rgb_old(img):
-    w, h = img.size
+    w, h = img.shape
     A = img
     if w < 256 or h < 256:
-        A = transforms.Scale(256, Image.BILINEAR)(img)
+        A = transforms.Resize(256, Image.BILINEAR)(img)
     return transforms.CenterCrop(256)(A)
 
 
@@ -161,11 +164,11 @@ if __name__ == "__main__":
             origin = input
             input = img_transform(input)
             input = input.unsqueeze(0)
-            mask = torch.zeros_like(input)
+            mask = paddle.zeros_like(input)
         ### Necessary input
 
         try:
-            with torch.no_grad():
+            with paddle.no_grad():
                 generated = model.inference(input, mask)
         except Exception as ex:
             print("Skip %s due to an error:\n%s" % (input_name, str(ex)))

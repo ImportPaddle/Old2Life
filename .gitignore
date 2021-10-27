@@ -1,2 +1,17 @@
 .DS_Store
 
+output/
+
+checkpoints/
+
+imgs/
+
+test_images/
+
+save/
+
+*.zip
+
+__pycache__/
+
+*.dat

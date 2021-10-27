@@ -2,8 +2,10 @@
 # Licensed under the MIT License.
 
 import random
-import torch
-from torch.autograd import Variable
+# import torch
+# from torch.autograd import Variable
+import paddle
+from paddle.autograd import PyLayer
 
 
 class ImagePool:
@@ -18,7 +20,7 @@ class ImagePool:
             return images
         return_images = []
         for image in images.data:
-            image = torch.unsqueeze(image, 0)
+            image = paddle.unsqueeze(image, 0)
             if self.num_imgs < self.pool_size:
                 self.num_imgs = self.num_imgs + 1
                 self.images.append(image)
@@ -32,5 +34,5 @@ class ImagePool:
                     return_images.append(tmp)
                 else:
                     return_images.append(image)
-        return_images = Variable(torch.cat(return_images, 0))
+        return_images = PyLayer(paddle.concat(return_images, 0))  #todo 可能有误
         return return_images

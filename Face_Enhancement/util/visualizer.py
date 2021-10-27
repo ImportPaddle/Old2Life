@@ -11,9 +11,11 @@ try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
     from io import BytesIO  # Python 3.x
-import torchvision.utils as vutils
+# import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
-import torch
+# import torch
+import paddle
+import torchvision_paddle.utils as vutils
 import numpy as np
 
 
@@ -54,7 +56,7 @@ class Visualizer:
             for key, tensor in visuals.items():
                 all_tensor.append((tensor.data.cpu() + 1) / 2)
 
-            output = torch.cat(all_tensor, 0)
+            output = paddle.concat(all_tensor, 0)
             img_grid = vutils.make_grid(output, nrow=self.opt.batchSize, padding=0, normalize=False)
 
             if self.opt.isTrain:

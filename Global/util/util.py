@@ -2,12 +2,15 @@
 # Licensed under the MIT License.
 
 from __future__ import print_function
-import torch
-import numpy as np
+# import torch
 from PIL import Image
 import numpy as np
 import os
-import torch.nn as nn
+# import torch.nn as nn
+
+
+import paddle
+import paddle.nn as nn
 
 # Converts a Tensor into a Numpy array
 # |imtype|: the desired type of the converted numpy array

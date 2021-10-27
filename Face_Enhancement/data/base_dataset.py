@@ -26,8 +26,8 @@ class BaseDataset(Dataset):
         pass
 
 
-def get_params(opt, size):
-    w, h = size
+def get_params(opt, shape):
+    w, h = shape
     new_h = h
     new_w = w
     if opt.preprocess_mode == "resize_and_crop":
@@ -90,7 +90,7 @@ def __resize(img, w, h, method=Image.BICUBIC):
 
 
 def __make_power_2(img, base, method=Image.BICUBIC):
-    ow, oh = img.size
+    ow, oh = img.shape
     h = int(round(oh / base) * base)
     w = int(round(ow / base) * base)
     if (h == oh) and (w == ow):
@@ -99,7 +99,7 @@ def __make_power_2(img, base, method=Image.BICUBIC):
 
 
 def __scale_width(img, target_width, method=Image.BICUBIC):
-    ow, oh = img.size
+    ow, oh = img.shape
     if ow == target_width:
         return img
     w = target_width
@@ -108,7 +108,7 @@ def __scale_width(img, target_width, method=Image.BICUBIC):
 
 
 def __scale_shortside(img, target_width, method=Image.BICUBIC):
-    ow, oh = img.size
+    ow, oh = img.shape
     ss, ls = min(ow, oh), max(ow, oh)  # shortside and longside
     width_is_shorter = ow == ss
     if ss == target_width:
@@ -118,10 +118,10 @@ def __scale_shortside(img, target_width, method=Image.BICUBIC):
     return img.resize((nw, nh), method)
 
 
-def __crop(img, pos, size):
-    ow, oh = img.size
+def __crop(img, pos, shape):
+    ow, oh = img.shape
     x1, y1 = pos
-    tw = th = size
+    tw = th = shape
     return img.crop((x1, y1, x1 + tw, y1 + th))
 
 

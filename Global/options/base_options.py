@@ -3,8 +3,11 @@
 
 import argparse
 import os
+
+import paddle
+
 from util import util
-import torch
+# import torch
 
 
 class BaseOptions:
@@ -351,7 +354,8 @@ class BaseOptions:
         # set gpu ids
         if len(self.opt.gpu_ids) > 0:
             # pass
-            torch.cuda.set_device(self.opt.gpu_ids[0])
+            # torch.cuda.set_device(self.opt.gpu_ids[0])
+            paddle.set_device(f'gpu:{self.opt.gpu_ids[0]}')
 
         args = vars(self.opt)
 

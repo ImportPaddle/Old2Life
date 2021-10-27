@@ -9,10 +9,13 @@ import time
 import warnings
 
 import numpy as np
-import torch
-import torch.nn.functional as F
-import torchvision as tv
+# import torch
+# import torch.nn.functional as F
+# import torchvision as tv
 from PIL import Image, ImageFile
+import paddle
+import paddle.nn.functional as F
+import torchvision_paddle
 
 from detection_models import networks
 from detection_util.util import *
@@ -24,7 +27,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def data_transforms(img, full_size, method=Image.BICUBIC):
     if full_size == "full_size":
-        ow, oh = img.size
+        ow, oh = img.shape
         h = int(round(oh / 16) * 16)
         w = int(round(ow / 16) * 16)
         if (h == oh) and (w == ow):
@@ -32,7 +35,7 @@ def data_transforms(img, full_size, method=Image.BICUBIC):
         return img.resize((w, h), method)
 
     elif full_size == "scale_256":
-        ow, oh = img.size
+        ow, oh = img.shape
         pw, ph = ow, oh
         if ow < oh:
             ow = 256
@@ -89,7 +92,7 @@ def main(config):
 
     ## load model
     checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints/detection/FT_Epoch_latest.pt")
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint = paddle.load(checkpoint_path, map_location="cpu")
     model.load_state_dict(checkpoint["model_state"])
     print("model weights loaded")
 
@@ -130,13 +133,13 @@ def main(config):
             print("Skipping non-file %s" % image_name)
             continue
         scratch_image = Image.open(scratch_file).convert("RGB")
-        w, h = scratch_image.size
+        w, h = scratch_image.shape
 
         transformed_image_PIL = data_transforms(scratch_image, config.input_size)
         scratch_image = transformed_image_PIL.convert("L")
-        scratch_image = tv.transforms.ToTensor()(scratch_image)
-        scratch_image = tv.transforms.Normalize([0.5], [0.5])(scratch_image)
-        scratch_image = torch.unsqueeze(scratch_image, 0)
+        scratch_image = paddle.vision.transforms.ToTensor()(scratch_image)
+        scratch_image = paddle.vision.transforms.Normalize([0.5], [0.5])(scratch_image)
+        scratch_image = paddle.unsqueeze(scratch_image, 0)
         _, _, ow, oh = scratch_image.shape
         scratch_image_scale = scale_tensor(scratch_image)
 
@@ -144,13 +147,13 @@ def main(config):
             scratch_image_scale = scratch_image_scale.to(config.GPU)
         else:
             scratch_image_scale = scratch_image_scale.cpu()
-        with torch.no_grad():
-            P = torch.sigmoid(model(scratch_image_scale))
+        with paddle.no_grad():
+            P = paddle.nn.functional.sigmoid(model(scratch_image_scale))
 
         P = P.data.cpu()
         P = F.interpolate(P, [ow, oh], mode="nearest")
 
-        tv.utils.save_image(
+        torchvision_paddle.utils.save_image(
             (P >= 0.4).float(),
             os.path.join(
                 output_dir,
@@ -162,7 +165,7 @@ def main(config):
         )
         transformed_image_PIL.save(os.path.join(input_dir, image_name[:-4] + ".png"))
         gc.collect()
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

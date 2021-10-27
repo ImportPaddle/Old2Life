@@ -10,9 +10,13 @@ import util.util as util
 from util.visualizer import Visualizer
 import os
 import numpy as np
-import torch
-import torchvision.utils as vutils
-from torch.autograd import Variable
+# import torch
+# import torchvision.utils as vutils
+# from torch.autograd import PyLayer
+
+import paddle
+import torchvision_paddle.utils as vutils
+from paddle.autograd import PyLayer
 import random
 
 
@@ -70,11 +74,11 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         save_fake = total_steps % opt.display_freq == display_delta
 
         ############## Forward Pass ######################
-        losses, generated = model(Variable(data['label']), Variable(data['inst']), 
-            Variable(data['image']), Variable(data['feat']), infer=save_fake)
+        losses, generated = model(PyLayer(data['label']), PyLayer(data['inst']), 
+            PyLayer(data['image']), PyLayer(data['feat']), infer=save_fake)
 
         # sum per device losses
-        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
+        losses = [ paddle.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
 
 
@@ -110,7 +114,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             if not os.path.exists(opt.outputs_dir + opt.name):
                 os.makedirs(opt.outputs_dir + opt.name)
             imgs_num = 5
-            imgs = torch.cat((data['label'][:imgs_num], generated.data.cpu()[:imgs_num], data['image'][:imgs_num]), 0)
+            imgs = paddle.concat((data['label'][:imgs_num], generated.data.cpu()[:imgs_num], data['image'][:imgs_num]), 0)
 
             imgs = (imgs + 1.) / 2.0
 

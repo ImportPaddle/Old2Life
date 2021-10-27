@@ -1,13 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch.utils.data as data
+# import torch.utils.data as data
 from PIL import Image
-import torchvision.transforms as transforms
+# import torchvision.transforms as transforms
+import paddle.vision.transforms as transforms
+import paddle
 import numpy as np
 import random
+from torchvision_paddle.Lambda import Lambda
 
-class BaseDataset(data.Dataset):
+class BaseDataset(paddle.io.Dataset):
     def __init__(self):
         super(BaseDataset, self).__init__()
 
@@ -47,14 +50,14 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
     transform_list = []
     if 'resize' in opt.resize_or_crop:
         osize = [opt.loadSize, opt.loadSize]
-        transform_list.append(transforms.Scale(osize, method))   
+        transform_list.append(transforms.resize(osize, method))
     elif 'scale_width' in opt.resize_or_crop:
     #    transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.loadSize, method)))  ## Here , We want the shorter side to match 256, and Scale will finish it.
         transform_list.append(transforms.Scale(256,method))
 
     if 'crop' in opt.resize_or_crop:
         if opt.isTrain:
-            transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.fineSize)))
+            transform_list.append(Lambda(lambda img: __crop(img, params['crop_pos'], opt.fineSize)))
         else:
             if opt.test_random_crop:
                 transform_list.append(transforms.RandomCrop(opt.fineSize))

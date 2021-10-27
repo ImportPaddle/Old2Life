@@ -42,8 +42,8 @@ class Pix2pixDataset(BaseDataset):
         self.image_paths = image_paths
         self.instance_paths = instance_paths
 
-        size = len(self.label_paths)
-        self.dataset_size = size
+        shape = len(self.label_paths)
+        self.dataset_size = shape
 
     def get_paths(self, opt):
         label_paths = []
@@ -61,7 +61,7 @@ class Pix2pixDataset(BaseDataset):
         # Label Image
         label_path = self.label_paths[index]
         label = Image.open(label_path)
-        params = get_params(self.opt, label.size)
+        params = get_params(self.opt, label.shape)
         transform_label = get_transform(self.opt, params, method=Image.NEAREST, normalize=False)
         label_tensor = transform_label(label) * 255.0
         label_tensor[label_tensor == 255] = self.opt.label_nc  # 'unknown' is opt.label_nc

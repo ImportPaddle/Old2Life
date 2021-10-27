@@ -10,9 +10,13 @@ import util.util as util
 from util.visualizer import Visualizer
 import os
 import numpy as np
-import torch
-import torchvision.utils as vutils
-from torch.autograd import Variable
+# import torch
+# import torchvision.utils as vutils
+# from torch.autograd import PyLayer
+
+import paddle
+import torchvision_paddle.utils as vutils
+from paddle.autograd import PyLayer
 import datetime
 import random
 
@@ -58,7 +62,7 @@ else:
     fd.close()
 
 if opt.isTrain and len(opt.gpu_ids) > 1:
-    model = torch.nn.DataParallel(model, device_ids=opt.gpu_ids)
+    model = paddle.DataParallel(model)
 
 
 
@@ -84,11 +88,11 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
         ############## Forward Pass ######################
         #print(pair)
-        losses, generated = model(Variable(data['label']), Variable(data['inst']), 
-            Variable(data['image']), Variable(data['feat']), infer=save_fake)
+        losses, generated = model(PyLayer(data['label']), PyLayer(data['inst']), 
+            PyLayer(data['image']), PyLayer(data['feat']), infer=save_fake)
         
         # sum per device losses
-        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
+        losses = [ paddle.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
 
         # calculate final loss scalar
@@ -125,9 +129,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             if opt.NL_use_mask:
                 mask=data['inst'][:imgs_num]
                 mask=mask.repeat(1,3,1,1)
-                imgs = torch.cat((data['label'][:imgs_num], mask,generated.data.cpu()[:imgs_num], data['image'][:imgs_num]), 0)
+                imgs = paddle.concat((data['label'][:imgs_num], mask,generated.data.cpu()[:imgs_num], data['image'][:imgs_num]), 0)
             else:
-                imgs = torch.cat((data['label'][:imgs_num], generated.data.cpu()[:imgs_num], data['image'][:imgs_num]), 0)
+                imgs = paddle.concat((data['label'][:imgs_num], generated.data.cpu()[:imgs_num], data['image'][:imgs_num]), 0)
 
             imgs=(imgs+1.)/2.0   ## de-normalize
 
