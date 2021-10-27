@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch.utils.data
+import paddle.io
 import random
 from data.base_data_loader import BaseDataLoader
 from data import online_dataset_for_old_photos as dts_ray_bigfile
@@ -27,7 +27,7 @@ class CustomDatasetDataLoader(BaseDataLoader):
     def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
         self.dataset = CreateDataset(opt)
-        self.dataloader = torch.utils.data.DataLoader(
+        self.dataloader = paddle.io.DataLoader(
             self.dataset,
             batch_size=opt.batchSize,
             shuffle=not opt.serial_batches,

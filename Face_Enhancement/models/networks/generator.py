@@ -9,9 +9,9 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 from Face_Enhancement.models.networks.base_network import BaseNetwork
 from Face_Enhancement.models.networks.normalization import get_nonspade_norm_layer
-from models.networks.architecture import ResnetBlock as ResnetBlock
-from models.networks.architecture import SPADEResnetBlock as SPADEResnetBlock
-from models.networks.architecture import SPADEResnetBlock_non_spade as SPADEResnetBlock_non_spade
+from Face_Enhancement.models.networks.architecture import ResnetBlock as ResnetBlock
+from Face_Enhancement.models.networks.architecture import SPADEResnetBlock as SPADEResnetBlock
+from Face_Enhancement.models.networks.architecture import SPADEResnetBlock_non_spade as SPADEResnetBlock_non_spade
 
 
 class SPADEGenerator(BaseNetwork):

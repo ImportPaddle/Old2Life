@@ -4,7 +4,7 @@
 # import torch.nn as nn
 # from torch.nn import init
 import paddle.nn as nn
-import initializer as init
+import Face_Enhancement.models.networks.initializer as init
 
 
 class BaseNetwork(nn.Layer):

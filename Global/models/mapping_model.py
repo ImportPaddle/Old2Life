@@ -2,20 +2,20 @@
 # Licensed under the MIT License.
 
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
 import os
 import functools
 from torch.autograd import Variable
-from util.image_pool import ImagePool
-from .base_model import BaseModel
-from . import networks
+from Global.util.image_pool import ImagePool
+from Global.models.base_model import BaseModel
+from Global.models import networks
 import math
-from .NonLocal_feature_mapping_model import *
+from Global.models.NonLocal_feature_mapping_model import *
 
 
-class Mapping_Model(nn.Module):
+class Mapping_Model(nn.Layer):
     def __init__(self, nc, mc=64, n_blocks=3, norm="instance", padding_type="reflect", opt=None):
         super(Mapping_Model, self).__init__()
 
@@ -30,7 +30,7 @@ class Mapping_Model(nn.Module):
         for i in range(n_up):
             ic = min(tmp_nc * (2 ** i), mc)
             oc = min(tmp_nc * (2 ** (i + 1)), mc)
-            model += [nn.Conv2d(ic, oc, 3, 1, 1), norm_layer(oc), activation]
+            model += [nn.Conv2D(ic, oc, 3, 1, 1), norm_layer(oc), activation]
         for i in range(n_blocks):
             model += [
                 networks.ResnetBlock(
@@ -46,11 +46,11 @@ class Mapping_Model(nn.Module):
         for i in range(n_up - 1):
             ic = min(64 * (2 ** (4 - i)), mc)
             oc = min(64 * (2 ** (3 - i)), mc)
-            model += [nn.Conv2d(ic, oc, 3, 1, 1), norm_layer(oc), activation]
-        model += [nn.Conv2d(tmp_nc * 2, tmp_nc, 3, 1, 1)]
+            model += [nn.Conv2D(ic, oc, 3, 1, 1), norm_layer(oc), activation]
+        model += [nn.Conv2D(tmp_nc * 2, tmp_nc, 3, 1, 1)]
         if opt.feat_dim > 0 and opt.feat_dim < 64:
-            model += [norm_layer(tmp_nc), activation, nn.Conv2d(tmp_nc, opt.feat_dim, 1, 1)]
-        # model += [nn.Conv2d(64, 1, 1, 1, 0)]
+            model += [norm_layer(tmp_nc), activation, nn.Conv2D(tmp_nc, opt.feat_dim, 1, 1)]
+        # model += [nn.Conv2D(64, 1, 1, 1, 0)]
         self.model = nn.Sequential(*model)
 
     def forward(self, input):
@@ -77,8 +77,8 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
-        if opt.resize_or_crop != "none" or not opt.isTrain:
-            torch.backends.cudnn.benchmark = True
+        # if opt.resize_or_crop != "none" or not opt.isTrain:
+        #     torch.backends.cudnn.benchmark = True  #todo
         self.isTrain = opt.isTrain
         input_nc = opt.label_nc if opt.label_nc != 0 else opt.input_nc
 
@@ -174,13 +174,13 @@ class Pix2PixHDModel_Mapping(BaseModel):
             self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)
 
 
-            self.criterionFeat = torch.nn.L1Loss()
-            self.criterionFeat_feat = torch.nn.L1Loss() if opt.use_l1_feat else torch.nn.MSELoss()
+            self.criterionFeat = paddle.nn.L1Loss()
+            self.criterionFeat_feat = paddle.nn.L1Loss() if opt.use_l1_feat else paddle.nn.MSELoss()
 
             if self.opt.image_L1:
-                self.criterionImage=torch.nn.L1Loss()
+                self.criterionImage=paddle.nn.L1Loss()
             else:
-                self.criterionImage = torch.nn.SmoothL1Loss()
+                self.criterionImage = paddle.nn.SmoothL1Loss()
 
 
             print(self.criterionFeat_feat)
@@ -204,11 +204,11 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
             if not opt.no_load_VAE:
                 params = list(self.mapping_net.parameters())
-                self.optimizer_mapping = torch.optim.Adam(params, lr=G_lr, betas=(beta1, beta2))
+                self.optimizer_mapping = paddle.optimizer.Adam(parameters=params, learning_rate=G_lr, beta1=beta1, beta2=beta2)
 
             # optimizer D                        
             params = list(self.netD.parameters())    
-            self.optimizer_D = torch.optim.Adam(params, lr=D_lr, betas=(beta1, beta2))
+            self.optimizer_D = paddle.optimizer.Adam(parameters=params, learning_rate=D_lr, beta1=beta1, beta2=beta2)
 
             print("---------- Optimizers initialized -------------")
 
@@ -219,7 +219,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
             # create one-hot vector for label map 
             size = label_map.size()
             oneHot_size = (size[0], self.opt.label_nc, size[2], size[3])
-            input_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
+            input_label = paddle.to_tensor(paddle.Tensor.size(oneHot_size), place=paddle.CUDAPlace()).zero_()#todo
             input_label = input_label.scatter_(1, label_map.data.long().cuda(), 1.0)
             if self.opt.data_type == 16:
                 input_label = input_label.half()
@@ -228,17 +228,17 @@ class Pix2PixHDModel_Mapping(BaseModel):
         if not self.opt.no_instance:
             inst_map = inst_map.data.cuda()
             edge_map = self.get_edges(inst_map)
-            input_label = torch.cat((input_label, edge_map), dim=1)         
-        input_label = Variable(input_label, volatile=infer)
+            input_label = paddle.concat((input_label, edge_map), axis=1)
+        input_label = paddle.to_tensor(input_label, stop_gradient=False)
 
         # real images for training
         if real_image is not None:
-            real_image = Variable(real_image.data.cuda())
+            real_image = paddle.to_tensor(real_image.data.cuda())
 
         return input_label, inst_map, real_image, feat_map
 
     def discriminate(self, input_label, test_image, use_pool=False):
-        input_concat = torch.cat((input_label, test_image.detach()), dim=1)
+        input_concat = paddle.concat((input_label, test_image.detach()), axis=1)
         if use_pool:            
             fake_query = self.fake_pool.query(input_concat)
             return self.netD.forward(fake_query)
@@ -279,7 +279,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
             loss_D_real = self.criterionGAN(pred_real, True)
 
             # GAN loss (Fake Passability Loss)        
-            pred_fake = self.netD.forward(torch.cat((label_feat.detach(), label_feat_map), dim=1))        
+            pred_fake = self.netD.forward(paddle.concat((label_feat.detach(), label_feat_map), axis=1))
             loss_G_GAN = self.criterionGAN(pred_fake, True)  
         else:
             # Fake Detection and Loss
@@ -294,7 +294,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
             loss_D_real = self.criterionGAN(pred_real, True)
 
             # GAN loss (Fake Passability Loss)        
-            pred_fake = self.netD.forward(torch.cat((input_label, fake_image), dim=1))        
+            pred_fake = self.netD.forward(paddle.concat((input_label, fake_image), axis=1))
             loss_G_GAN = self.criterionGAN(pred_fake, True)               
         
         # GAN feature matching loss
@@ -307,12 +307,12 @@ class Pix2PixHDModel_Mapping(BaseModel):
                     tmp = self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat
                     loss_G_GAN_Feat += D_weights * feat_weights * tmp
         else:
-            loss_G_GAN_Feat = torch.zeros(1).to(label.device)
+            loss_G_GAN_Feat = paddle.zeros(1).to(label.device)
                    
         # VGG feature matching loss
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
-            loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat if pair else torch.zeros(1).to(label.device)
+            loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat if pair else paddle.zeros(1).to(label.device)
 
         smooth_l1_loss=0
         if self.opt.Smooth_L1:

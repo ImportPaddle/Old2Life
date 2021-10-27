@@ -2,19 +2,19 @@
 # Licensed under the MIT License.
 
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
 import os
 import functools
 from torch.autograd import Variable
-from util.image_pool import ImagePool
+# from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
 import math
 
 
-class Mapping_Model_with_mask(nn.Module):
+class Mapping_Model_with_mask(nn.Layer):
     def __init__(self, nc, mc=64, n_blocks=3, norm="instance", padding_type="reflect", opt=None):
         super(Mapping_Model_with_mask, self).__init__()
 
@@ -28,7 +28,7 @@ class Mapping_Model_with_mask(nn.Module):
         for i in range(n_up):
             ic = min(tmp_nc * (2 ** i), mc)
             oc = min(tmp_nc * (2 ** (i + 1)), mc)
-            model += [nn.Conv2d(ic, oc, 3, 1, 1), norm_layer(oc), activation]
+            model += [nn.Conv2D(ic, oc, 3, 1, 1), norm_layer(oc), activation]
 
         self.before_NL = nn.Sequential(*model)
 
@@ -60,11 +60,11 @@ class Mapping_Model_with_mask(nn.Module):
         for i in range(n_up - 1):
             ic = min(64 * (2 ** (4 - i)), mc)
             oc = min(64 * (2 ** (3 - i)), mc)
-            model += [nn.Conv2d(ic, oc, 3, 1, 1), norm_layer(oc), activation]
-        model += [nn.Conv2d(tmp_nc * 2, tmp_nc, 3, 1, 1)]
+            model += [nn.Conv2D(ic, oc, 3, 1, 1), norm_layer(oc), activation]
+        model += [nn.Conv2D(tmp_nc * 2, tmp_nc, 3, 1, 1)]
         if opt.feat_dim > 0 and opt.feat_dim < 64:
-            model += [norm_layer(tmp_nc), activation, nn.Conv2d(tmp_nc, opt.feat_dim, 1, 1)]
-        # model += [nn.Conv2d(64, 1, 1, 1, 0)]
+            model += [norm_layer(tmp_nc), activation, nn.Conv2D(tmp_nc, opt.feat_dim, 1, 1)]
+        # model += [nn.Conv2D(64, 1, 1, 1, 0)]
         self.after_NL = nn.Sequential(*model)
         
     
@@ -78,7 +78,7 @@ class Mapping_Model_with_mask(nn.Module):
 
         return x3
 
-class Mapping_Model_with_mask_2(nn.Module): ## Multi-Scale Patch Attention
+class Mapping_Model_with_mask_2(nn.Layer): ## Multi-Scale Patch Attention
     def __init__(self, nc, mc=64, n_blocks=3, norm="instance", padding_type="reflect", opt=None):
         super(Mapping_Model_with_mask_2, self).__init__()
 
@@ -92,7 +92,7 @@ class Mapping_Model_with_mask_2(nn.Module): ## Multi-Scale Patch Attention
         for i in range(n_up):
             ic = min(tmp_nc * (2 ** i), mc)
             oc = min(tmp_nc * (2 ** (i + 1)), mc)
-            model += [nn.Conv2d(ic, oc, 3, 1, 1), norm_layer(oc), activation]
+            model += [nn.Conv2D(ic, oc, 3, 1, 1), norm_layer(oc), activation]
 
         for i in range(2):
             model += [
@@ -166,10 +166,10 @@ class Mapping_Model_with_mask_2(nn.Module): ## Multi-Scale Patch Attention
         for i in range(n_up - 1):
             ic = min(64 * (2 ** (4 - i)), mc)
             oc = min(64 * (2 ** (3 - i)), mc)
-            model += [nn.Conv2d(ic, oc, 3, 1, 1), norm_layer(oc), activation]
-        model += [nn.Conv2d(tmp_nc * 2, tmp_nc, 3, 1, 1)]
+            model += [nn.Conv2D(ic, oc, 3, 1, 1), norm_layer(oc), activation]
+        model += [nn.Conv2D(tmp_nc * 2, tmp_nc, 3, 1, 1)]
         if opt.feat_dim > 0 and opt.feat_dim < 64:
-            model += [norm_layer(tmp_nc), activation, nn.Conv2d(tmp_nc, opt.feat_dim, 1, 1)]
+            model += [norm_layer(tmp_nc), activation, nn.Conv2D(tmp_nc, opt.feat_dim, 1, 1)]
         # model += [nn.Conv2d(64, 1, 1, 1, 0)]
         self.after_NL = nn.Sequential(*model)
         
@@ -199,4 +199,4 @@ class Mapping_Model_with_mask_2(nn.Module): ## Multi-Scale Patch Attention
         del x5
         x7 = self.after_NL(x6)
         del x6
-        return x7   
+        return x7

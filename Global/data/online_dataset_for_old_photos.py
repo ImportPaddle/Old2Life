@@ -7,7 +7,7 @@ import zipfile
 from data.base_dataset import BaseDataset, get_params, get_transform, normalize
 from data.image_folder import make_dataset
 from PIL import Image
-import torchvision.transforms as transforms
+import paddle.vision.transforms as transforms
 import numpy as np
 from data.Load_Bigfile import BigFileMemoryLoader
 import random
@@ -261,7 +261,7 @@ class UnPairOldPhotos_SR(BaseDataset):  ## Synthetic + Real Old
         A=img
         w,h=A.size
         if w<256 or h<256:
-            A=transforms.Scale(256,Image.BICUBIC)(A)
+            A=transforms.Resize(256,Image.BICUBIC)(A)
         ## Since we want to only crop the images (256*256), for those old photos whose size is smaller than 256, we first resize them.
 
         transform_params = get_params(self.opt, A.size)
@@ -351,8 +351,8 @@ class PairOldPhotos(BaseDataset):
         # B = img.crop((w2, 0, w, h))
         w,h=A.size
         if w<256 or h<256:
-            A=transforms.Scale(256,Image.BICUBIC)(A)
-            B=transforms.Scale(256, Image.BICUBIC)(B)
+            A=transforms.Resize(256,Image.BICUBIC)(A)
+            B=transforms.Resize(256, Image.BICUBIC)(B)
 
         # apply the same transform to both A and B
         transform_params = get_params(self.opt, A.size)

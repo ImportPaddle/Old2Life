@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import torch.utils.data as data
+import paddle.io
 from PIL import Image
 import os
 
@@ -32,9 +33,9 @@ def default_loader(path):
     return Image.open(path).convert('RGB')
 
 
-class ImageFolder(data.Dataset):
+class ImageFolder(paddle.io.Dataset):
 
-    def __init__(self, root, transform=None, return_paths=False,
+    def __init__(self, root, transform=None, return_paths=False,#todo
                  loader=default_loader):
         imgs = make_dataset(root)
         if len(imgs) == 0:

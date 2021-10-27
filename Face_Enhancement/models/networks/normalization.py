@@ -11,7 +11,7 @@ import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
 from paddle.nn.utils.spectral_norm_hook import spectral_norm
-from models.networks.sync_batchnorm import SynchronizedBatchNorm2d
+from Face_Enhancement.models.networks.sync_batchnorm import SynchronizedBatchNorm2d
 
 class BatchNorm2D(paddle.nn.BatchNorm2D):
     def __init__(self,

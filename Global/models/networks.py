@@ -1,15 +1,15 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import torch
-import torch.nn as nn
+import paddle
+import paddle.nn as nn
+import Global.fold as fold
 import functools
-from torch.autograd import Variable
 import numpy as np
-from torch.nn.utils import spectral_norm
 
-# from util.util import SwitchNorm2d
-import torch.nn.functional as F
+# from Global.util.util import SwitchNorm2d
+import paddle.nn.functional as F
+from Face_Enhancement.models.networks import initializer
 
 ###############################################################################
 # Functions
@@ -18,18 +18,18 @@ def weights_init(m):
     classname = m.__class__.__name__
     if classname.find("Conv") != -1:
         m.weight.data.normal_(0.0, 0.02)
-    elif classname.find("BatchNorm2d") != -1:
+    elif classname.find("BatchNorm2D") != -1:
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
 
 def get_norm_layer(norm_type="instance"):
     if norm_type == "batch":
-        norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
+        norm_layer = functools.partial(nn.BatchNorm2D, affine=True)
     elif norm_type == "instance":
-        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
+        norm_layer = functools.partial(nn.InstanceNorm2D, affine=False)
     elif norm_type == "spectral":
-        norm_layer = spectral_norm()
+        norm_layer = paddle.nn.utils.spectral_norm()
     elif norm_type == "SwitchNorm":
         norm_layer = SwitchNorm2d
     else:
@@ -61,7 +61,7 @@ def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_
         raise('generator not implemented!')
     print(netG)
     if len(gpu_ids) > 0:
-        assert(torch.cuda.is_available())
+        assert(paddle.device.is_compiled_with_cuda())
         netG.cuda(gpu_ids[0])
     netG.apply(weights_init)
     return netG
@@ -72,14 +72,14 @@ def define_D(input_nc, ndf, n_layers_D, opt, norm='instance', use_sigmoid=False,
     netD = MultiscaleDiscriminator(input_nc, opt, ndf, n_layers_D, norm_layer, use_sigmoid, num_D, getIntermFeat)
     print(netD)
     if len(gpu_ids) > 0:
-        assert(torch.cuda.is_available())
+        assert(paddle.device.is_compiled_with_cuda())
         netD.cuda(gpu_ids[0])
     netD.apply(weights_init)
     return netD
 
 
 
-class GlobalGenerator_DCDCv2(nn.Module):
+class GlobalGenerator_DCDCv2(nn.Layer):
     def __init__(
         self,
         input_nc,
@@ -87,7 +87,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
         ngf=64,
         k_size=3,
         n_downsampling=8,
-        norm_layer=nn.BatchNorm2d,
+        norm_layer=nn.BatchNorm2D,
         padding_type="reflect",
         opt=None,
     ):
@@ -95,8 +95,8 @@ class GlobalGenerator_DCDCv2(nn.Module):
         activation = nn.ReLU(True)
 
         model = [
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(input_nc, min(ngf, opt.mc), kernel_size=7, padding=0),
+            nn.Pad2D(3, mode='reflect'),
+            nn.Conv2D(input_nc, min(ngf, opt.mc), kernel_size=7, padding=0),
             norm_layer(ngf),
             activation,
         ]
@@ -104,7 +104,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
         for i in range(opt.start_r):
             mult = 2 ** i
             model += [
-                nn.Conv2d(
+                nn.Conv2D(
                     min(ngf * mult, opt.mc),
                     min(ngf * mult * 2, opt.mc),
                     kernel_size=k_size,
@@ -117,7 +117,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
         for i in range(opt.start_r, n_downsampling - 1):
             mult = 2 ** i
             model += [
-                nn.Conv2d(
+                nn.Conv2D(
                     min(ngf * mult, opt.mc),
                     min(ngf * mult * 2, opt.mc),
                     kernel_size=k_size,
@@ -149,7 +149,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
 
         if opt.spatio_size == 32:
             model += [
-                nn.Conv2d(
+                nn.Conv2D(
                     min(ngf * mult, opt.mc),
                     min(ngf * mult * 2, opt.mc),
                     kernel_size=k_size,
@@ -178,16 +178,16 @@ class GlobalGenerator_DCDCv2(nn.Module):
                 opt=opt,
             )
         ]
-        # model += [nn.Conv2d(min(ngf * mult * 2, opt.mc), min(ngf, opt.mc), 1, 1)]
+        # model += [nn.Conv2D(min(ngf * mult * 2, opt.mc), min(ngf, opt.mc), 1, 1)]
         if opt.feat_dim > 0:
-            model += [nn.Conv2d(min(ngf * mult * 2, opt.mc), opt.feat_dim, 1, 1)]
+            model += [nn.Conv2D(min(ngf * mult * 2, opt.mc), opt.feat_dim, 1, 1)]
         self.encoder = nn.Sequential(*model)
 
         # decode
         model = []
         if opt.feat_dim > 0:
-            model += [nn.Conv2d(opt.feat_dim, min(ngf * mult * 2, opt.mc), 1, 1)]
-        # model += [nn.Conv2d(min(ngf, opt.mc), min(ngf * mult * 2, opt.mc), 1, 1)]
+            model += [nn.Conv2D(opt.feat_dim, min(ngf * mult * 2, opt.mc), 1, 1)]
+        # model += [nn.Conv2D(min(ngf, opt.mc), min(ngf * mult * 2, opt.mc), 1, 1)]
         o_pad = 0 if k_size == 4 else 1
         mult = 2 ** n_downsampling
         model += [
@@ -202,7 +202,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
 
         if opt.spatio_size == 32:
             model += [
-                nn.ConvTranspose2d(
+                nn.Conv2DTranspose(
                     min(ngf * mult, opt.mc),
                     min(int(ngf * mult / 2), opt.mc),
                     kernel_size=k_size,
@@ -245,7 +245,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
                 )
             ]
             model += [
-                nn.ConvTranspose2d(
+                nn.Conv2DTranspose(
                     min(ngf * mult, opt.mc),
                     min(int(ngf * mult / 2), opt.mc),
                     kernel_size=k_size,
@@ -259,7 +259,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
         for i in range(n_downsampling - opt.start_r, n_downsampling):
             mult = 2 ** (n_downsampling - i)
             model += [
-                nn.ConvTranspose2d(
+                nn.Conv2DTranspose(
                     min(ngf * mult, opt.mc),
                     min(int(ngf * mult / 2), opt.mc),
                     kernel_size=k_size,
@@ -271,12 +271,12 @@ class GlobalGenerator_DCDCv2(nn.Module):
                 activation,
             ]
         if opt.use_segmentation_model:
-            model += [nn.ReflectionPad2d(3), nn.Conv2d(min(ngf, opt.mc), output_nc, kernel_size=7, padding=0)]
+            model += [nn.Pad2D(3, mode='reflect'), nn.Conv2D(min(ngf, opt.mc), output_nc, kernel_size=7, padding=0)]
         else:
             model += [
-                nn.ReflectionPad2d(3),
-                nn.Conv2d(min(ngf, opt.mc), output_nc, kernel_size=7, padding=0),
-                nn.Tanh(),
+                nn.Pad2D(3, mode='reflect'),
+                nn.Conv2D(min(ngf, opt.mc), output_nc, kernel_size=7, padding=0),
+                nn.Tanh(),#todo
             ]
         self.decoder = nn.Sequential(*model)
 
@@ -292,7 +292,7 @@ class GlobalGenerator_DCDCv2(nn.Module):
 
 
 # Define a resnet block
-class ResnetBlock(nn.Module):
+class ResnetBlock(nn.Layer):
     def __init__(
         self, dim, padding_type, norm_layer, opt, activation=nn.ReLU(True), use_dropout=False, dilation=1
     ):
@@ -305,16 +305,16 @@ class ResnetBlock(nn.Module):
         conv_block = []
         p = 0
         if padding_type == "reflect":
-            conv_block += [nn.ReflectionPad2d(self.dilation)]
+            conv_block += [nn.Pad2D(self.dilation, mode='reflect')]
         elif padding_type == "replicate":
-            conv_block += [nn.ReplicationPad2d(self.dilation)]
+            conv_block += [nn.Pad2D(self.dilation, mode='replicate')]
         elif padding_type == "zero":
             p = self.dilation
         else:
             raise NotImplementedError("padding [%s] is not implemented" % padding_type)
 
         conv_block += [
-            nn.Conv2d(dim, dim, kernel_size=3, padding=p, dilation=self.dilation),
+            nn.Conv2D(dim, dim, kernel_size=3, padding=p, dilation=self.dilation),
             norm_layer(dim),
             activation,
         ]
@@ -323,14 +323,14 @@ class ResnetBlock(nn.Module):
 
         p = 0
         if padding_type == "reflect":
-            conv_block += [nn.ReflectionPad2d(1)]
+            conv_block += [nn.Pad2D(1, mode='reflect')]
         elif padding_type == "replicate":
-            conv_block += [nn.ReplicationPad2d(1)]
+            conv_block += [nn.Pad2D(1, mode='replicate')]
         elif padding_type == "zero":
             p = 1
         else:
             raise NotImplementedError("padding [%s] is not implemented" % padding_type)
-        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, dilation=1), norm_layer(dim)]
+        conv_block += [nn.Conv2D(dim, dim, kernel_size=3, padding=p, dilation=1), norm_layer(dim)]
 
         return nn.Sequential(*conv_block)
 
@@ -339,14 +339,14 @@ class ResnetBlock(nn.Module):
         return out
 
 
-class Encoder(nn.Module):
-    def __init__(self, input_nc, output_nc, ngf=32, n_downsampling=4, norm_layer=nn.BatchNorm2d):
+class Encoder(nn.Layer):
+    def __init__(self, input_nc, output_nc, ngf=32, n_downsampling=4, norm_layer=nn.BatchNorm2D):
         super(Encoder, self).__init__()
         self.output_nc = output_nc
 
         model = [
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0),
+            nn.Pad2D(3, mode='reflect'),
+            nn.Conv2D(input_nc, ngf, kernel_size=7, padding=0),
             norm_layer(ngf),
             nn.ReLU(True),
         ]
@@ -354,7 +354,7 @@ class Encoder(nn.Module):
         for i in range(n_downsampling):
             mult = 2 ** i
             model += [
-                nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1),
+                nn.Conv2D(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1),
                 norm_layer(ngf * mult * 2),
                 nn.ReLU(True),
             ]
@@ -363,14 +363,14 @@ class Encoder(nn.Module):
         for i in range(n_downsampling):
             mult = 2 ** (n_downsampling - i)
             model += [
-                nn.ConvTranspose2d(
+                nn.Conv2DTranspose(
                     ngf * mult, int(ngf * mult / 2), kernel_size=3, stride=2, padding=1, output_padding=1
                 ),
                 norm_layer(int(ngf * mult / 2)),
                 nn.ReLU(True),
             ]
 
-        model += [nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0), nn.Tanh()]
+        model += [nn.Pad2D(3, mode='reflect'), nn.Conv2D(ngf, output_nc, kernel_size=7, padding=0), nn.Tanh()]
         self.model = nn.Sequential(*model)
 
     def forward(self, input, inst):
@@ -384,7 +384,7 @@ class Encoder(nn.Module):
                 indices = (inst[b : b + 1] == int(i)).nonzero()  # n x 4
                 for j in range(self.output_nc):
                     output_ins = outputs[indices[:, 0] + b, indices[:, 1] + j, indices[:, 2], indices[:, 3]]
-                    mean_feat = torch.mean(output_ins).expand_as(output_ins)
+                    mean_feat = paddle.mean(output_ins).expand_as(output_ins)
                     outputs_mean[
                         indices[:, 0] + b, indices[:, 1] + j, indices[:, 2], indices[:, 3]
                     ] = mean_feat
@@ -393,12 +393,12 @@ class Encoder(nn.Module):
 
 def SN(module, mode=True):
     if mode:
-        return torch.nn.utils.spectral_norm(module)
+        return paddle.nn.utils.spectral_norm(module)
 
     return module
 
 
-class NonLocalBlock2D_with_mask_Res(nn.Module):
+class NonLocalBlock2D_with_mask_Res(nn.Layer):
     def __init__(
         self,
         in_channels,
@@ -416,24 +416,25 @@ class NonLocalBlock2D_with_mask_Res(nn.Module):
         self.in_channels = in_channels
         self.inter_channels = inter_channels
 
-        self.g = nn.Conv2d(
+        self.g = nn.Conv2D(
             in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
         )
 
-        self.W = nn.Conv2d(
+        self.W = nn.Conv2D(
             in_channels=self.inter_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0
         )
         # for pytorch 0.3.1
         # nn.init.constant(self.W.weight, 0)
         # nn.init.constant(self.W.bias, 0)
         # for pytorch 0.4.0
-        nn.init.constant_(self.W.weight, 0)
-        nn.init.constant_(self.W.bias, 0)
-        self.theta = nn.Conv2d(
+        initializer.constant_(self.W.weight, 0)#todo
+
+        initializer.constant_(self.W.bias, 0)
+        self.theta = nn.Conv2D(
             in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
         )
 
-        self.phi = nn.Conv2d(
+        self.phi = nn.Conv2D(
             in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
         )
 
@@ -471,14 +472,14 @@ class NonLocalBlock2D_with_mask_Res(nn.Module):
         phi_x = self.phi(x).view(batch_size, self.inter_channels, -1)
 
         if self.cosin:
-            theta_x = F.normalize(theta_x, dim=2)
-            phi_x = F.normalize(phi_x, dim=1)
+            theta_x = F.normalize(theta_x, axis=2)
+            phi_x = F.normalize(phi_x, axis=1)
 
-        f = torch.matmul(theta_x, phi_x)
+        f = paddle.matmul(theta_x, phi_x)
 
         f /= self.temperature
 
-        f_div_C = F.softmax(f, dim=2)
+        f_div_C = F.softmax(f, axis=2)
 
         tmp = 1 - mask
         mask = F.interpolate(mask, (x.size(2), x.size(3)), mode="bilinear")
@@ -504,11 +505,11 @@ class NonLocalBlock2D_with_mask_Res(nn.Module):
 
         f_div_C = mask_expand * f_div_C
         if self.renorm:
-            f_div_C = F.normalize(f_div_C, p=1, dim=2)
+            f_div_C = F.normalize(f_div_C, p=1, axis=2)
 
         ###########################
 
-        y = torch.matmul(f_div_C, g_x)
+        y = paddle.matmul(f_div_C, g_x)
 
         y = y.permute(0, 2, 1).contiguous()
 
@@ -523,8 +524,8 @@ class NonLocalBlock2D_with_mask_Res(nn.Module):
         return z
 
 
-class MultiscaleDiscriminator(nn.Module):
-    def __init__(self, input_nc, opt, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d,
+class MultiscaleDiscriminator(nn.Layer):
+    def __init__(self, input_nc, opt, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2D,
                  use_sigmoid=False, num_D=3, getIntermFeat=False):
         super(MultiscaleDiscriminator, self).__init__()
         self.num_D = num_D
@@ -539,7 +540,7 @@ class MultiscaleDiscriminator(nn.Module):
             else:
                 setattr(self, 'layer'+str(i), netD.model)
 
-        self.downsample = nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)
+        self.downsample = nn.AvgPool2D(3, stride=2, padding=[1, 1], exclusive=True)
 
     def singleD_forward(self, model, input):
         if self.getIntermFeat:
@@ -565,34 +566,34 @@ class MultiscaleDiscriminator(nn.Module):
         return result
 
 # Defines the PatchGAN discriminator with the specified arguments.
-class NLayerDiscriminator(nn.Module):
-    def __init__(self, input_nc, opt, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False, getIntermFeat=False):
+class NLayerDiscriminator(nn.Layer):
+    def __init__(self, input_nc, opt, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2D, use_sigmoid=False, getIntermFeat=False):
         super(NLayerDiscriminator, self).__init__()
         self.getIntermFeat = getIntermFeat
         self.n_layers = n_layers
 
         kw = 4
         padw = int(np.ceil((kw-1.0)/2))
-        sequence = [[SN(nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),opt.use_SN), nn.LeakyReLU(0.2, True)]]
+        sequence = [[SN(nn.Conv2D(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),opt.use_SN), nn.LeakyReLU(0.2, True)]]
 
         nf = ndf
         for n in range(1, n_layers):
             nf_prev = nf
             nf = min(nf * 2, 512)
             sequence += [[
-                SN(nn.Conv2d(nf_prev, nf, kernel_size=kw, stride=2, padding=padw),opt.use_SN),
+                SN(nn.Conv2D(nf_prev, nf, kernel_size=kw, stride=2, padding=padw),opt.use_SN),
                 norm_layer(nf), nn.LeakyReLU(0.2, True)
             ]]
 
         nf_prev = nf
         nf = min(nf * 2, 512)
         sequence += [[
-            SN(nn.Conv2d(nf_prev, nf, kernel_size=kw, stride=1, padding=padw),opt.use_SN),
+            SN(nn.Conv2D(nf_prev, nf, kernel_size=kw, stride=1, padding=padw),opt.use_SN),
             norm_layer(nf),
             nn.LeakyReLU(0.2, True)
         ]]
 
-        sequence += [[SN(nn.Conv2d(nf, 1, kernel_size=kw, stride=1, padding=padw),opt.use_SN)]]
+        sequence += [[SN(nn.Conv2D(nf, 1, kernel_size=kw, stride=1, padding=padw),opt.use_SN)]]
 
         if use_sigmoid:
             sequence += [[nn.Sigmoid()]]
@@ -618,18 +619,18 @@ class NLayerDiscriminator(nn.Module):
 
 
 
-class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv and mask
+class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv and mask
     def __init__(self, in_channels, inter_channels, patch_size):
         super(Patch_Attention_4, self).__init__()
 
         self.patch_size=patch_size
 
 
-        # self.g = nn.Conv2d(
+        # self.g = nn.Conv2D(
         #     in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
         # )
 
-        # self.W = nn.Conv2d(
+        # self.W = nn.Conv2D(
         #     in_channels=self.inter_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0
         # )
         # # for pytorch 0.3.1
@@ -638,15 +639,15 @@ class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv 
         # # for pytorch 0.4.0
         # nn.init.constant_(self.W.weight, 0)
         # nn.init.constant_(self.W.bias, 0)
-        # self.theta = nn.Conv2d(
+        # self.theta = nn.Conv2D(
         #     in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
         # )
 
-        # self.phi = nn.Conv2d(
+        # self.phi = nn.Conv2D(
         #     in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
         # )
 
-        self.F_Combine=nn.Conv2d(in_channels=1025,out_channels=512,kernel_size=3,stride=1,padding=1,bias=True)
+        self.F_Combine=nn.Conv2D(in_channels=1025,out_channels=512,kernel_size=3,stride=1,padding=1,bias_attr=True)
         norm_layer = get_norm_layer(norm_type="instance")
         activation = nn.ReLU(True)
 
@@ -673,7 +674,7 @@ class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv 
         expanse[0] = -1
         expanse[dim] = -1
         index = index.view(views).expand(expanse)
-        return torch.gather(input, dim, index)
+        return paddle.gather(input, axis=dim, index=index)
 
     def forward(self, z, mask):  ## The shape of mask is Batch*1*H*W
 
@@ -692,27 +693,27 @@ class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv 
         # mask=1-mask
         ## 1: mask position 0: non-mask
 
-        mask_unfold=F.unfold(mask, kernel_size=(self.patch_size,self.patch_size), padding=0, stride=self.patch_size)
-        non_mask_region=(torch.mean(mask_unfold,dim=1,keepdim=True)>0.6).float()
+        mask_unfold=F.unfold(mask, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
+        non_mask_region=(paddle.mean(mask_unfold,axis=1,keepdim=True)>0.6).float()
         all_patch_num=h*w/self.patch_size/self.patch_size
         non_mask_region=non_mask_region.repeat(1,int(all_patch_num),1)
 
-        x_unfold=F.unfold(x, kernel_size=(self.patch_size,self.patch_size), padding=0, stride=self.patch_size)
+        x_unfold=F.unfold(x, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
         y_unfold=x_unfold.permute(0,2,1)
-        x_unfold_normalized=F.normalize(x_unfold,dim=1)
-        y_unfold_normalized=F.normalize(y_unfold,dim=2)
-        correlation_matrix=torch.bmm(y_unfold_normalized,x_unfold_normalized)
+        x_unfold_normalized=F.normalize(x_unfold,axis=1)
+        y_unfold_normalized=F.normalize(y_unfold,axis=2)
+        correlation_matrix=paddle.bmm(y_unfold_normalized,x_unfold_normalized)
         correlation_matrix=correlation_matrix.masked_fill(non_mask_region==1.,-1e9)
-        correlation_matrix=F.softmax(correlation_matrix,dim=2)
+        correlation_matrix=F.softmax(correlation_matrix,axis=2)
 
         # print(correlation_matrix)
 
-        R, max_arg=torch.max(correlation_matrix,dim=2)
+        R, max_arg=paddle.max(correlation_matrix,axis=2)
 
         composed_unfold=self.Hard_Compose(x_unfold, 2, max_arg)
-        composed_fold=F.fold(composed_unfold,output_size=(h,w),kernel_size=(self.patch_size,self.patch_size),padding=0,stride=self.patch_size)
+        composed_fold=fold.fold(composed_unfold,output_size=(h,w),kernel_size=(self.patch_size,self.patch_size),padding=0,stride=self.patch_size)
 
-        concat_1=torch.cat((z,composed_fold,mask),dim=1)
+        concat_1=paddle.concat((z,composed_fold,mask),axis=1)
         concat_1=self.F_Combine(concat_1)
 
         return concat_1
@@ -734,12 +735,12 @@ class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv 
         # mask=1-mask
         ## 1: mask position 0: non-mask
 
-        mask_unfold=F.unfold(mask, kernel_size=(self.patch_size,self.patch_size), padding=0, stride=self.patch_size)
-        non_mask_region=(torch.mean(mask_unfold,dim=1,keepdim=True)>0.6).float()[0,0,:] # 1*1*all_patch_num
+        mask_unfold=F.unfold(mask, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
+        non_mask_region=(paddle.mean(mask_unfold,axis=1,keepdim=True)>0.6).float()[0,0,:] # 1*1*all_patch_num
 
         all_patch_num=h*w/self.patch_size/self.patch_size
 
-        mask_index=torch.nonzero(non_mask_region,as_tuple=True)[0]
+        mask_index=paddle.nonzero(non_mask_region,as_tuple=True)[0]
 
 
         if len(mask_index)==0: ## No mask patch is selected, no attention is needed
@@ -748,28 +749,28 @@ class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv 
 
         else:
 
-            unmask_index=torch.nonzero(non_mask_region!=1,as_tuple=True)[0]
+            unmask_index=paddle.nonzero(non_mask_region!=1,as_tuple=True)[0]
 
-            x_unfold=F.unfold(x, kernel_size=(self.patch_size,self.patch_size), padding=0, stride=self.patch_size)
+            x_unfold=F.unfold(x, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
             
-            Query_Patch=torch.index_select(x_unfold,2,mask_index)
-            Key_Patch=torch.index_select(x_unfold,2,unmask_index)
+            Query_Patch=paddle.index_select(x_unfold,2,mask_index)
+            Key_Patch=paddle.index_select(x_unfold,2,unmask_index)
 
             Query_Patch=Query_Patch.permute(0,2,1)        
-            Query_Patch_normalized=F.normalize(Query_Patch,dim=2)
-            Key_Patch_normalized=F.normalize(Key_Patch,dim=1)
+            Query_Patch_normalized=F.normalize(Query_Patch,axis=2)
+            Key_Patch_normalized=F.normalize(Key_Patch,axis=1)
 
-            correlation_matrix=torch.bmm(Query_Patch_normalized,Key_Patch_normalized)
-            correlation_matrix=F.softmax(correlation_matrix,dim=2)
+            correlation_matrix=paddle.bmm(Query_Patch_normalized,Key_Patch_normalized)
+            correlation_matrix=F.softmax(correlation_matrix,axis=2)
 
 
-            R, max_arg=torch.max(correlation_matrix,dim=2)
+            R, max_arg=paddle.max(correlation_matrix,axis=2)
 
             composed_unfold=self.Hard_Compose(Key_Patch, 2, max_arg)
             x_unfold[:,:,mask_index]=composed_unfold
-            composed_fold=F.fold(x_unfold,output_size=(h,w),kernel_size=(self.patch_size,self.patch_size),padding=0,stride=self.patch_size)
+            composed_fold=fold(x_unfold,output_size=(h,w),kernel_size=(self.patch_size,self.patch_size),padding=0,stride=self.patch_size)
 
-        concat_1=torch.cat((z,composed_fold,mask),dim=1)
+        concat_1=paddle.concat((z,composed_fold,mask),axis=1)
         concat_1=self.F_Combine(concat_1)
 
 
@@ -778,9 +779,9 @@ class Patch_Attention_4(nn.Module):  ## While combine the feature map, use conv 
 ##############################################################################
 # Losses
 ##############################################################################
-class GANLoss(nn.Module):
+class GANLoss(nn.Layer):
     def __init__(self, use_lsgan=True, target_real_label=1.0, target_fake_label=0.0,
-                 tensor=torch.FloatTensor):
+                 tensor=paddle.Tensor):#todo
         super(GANLoss, self).__init__()
         self.real_label = target_real_label
         self.fake_label = target_fake_label
@@ -799,14 +800,14 @@ class GANLoss(nn.Module):
                             (self.real_label_var.numel() != input.numel()))
             if create_label:
                 real_tensor = self.Tensor(input.size()).fill_(self.real_label)
-                self.real_label_var = Variable(real_tensor, requires_grad=False)
+                self.real_label_var = paddle.to_tensor(real_tensor.astype(paddle.float32), stop_gradient=True)#todo
             target_tensor = self.real_label_var
         else:
             create_label = ((self.fake_label_var is None) or
                             (self.fake_label_var.numel() != input.numel()))
             if create_label:
                 fake_tensor = self.Tensor(input.size()).fill_(self.fake_label)
-                self.fake_label_var = Variable(fake_tensor, requires_grad=False)
+                self.fake_label_var = paddle.to_tensor(fake_tensor.astype(paddle.float32), stop_gradient=True)
             target_tensor = self.fake_label_var
         return target_tensor
 
@@ -828,15 +829,15 @@ class GANLoss(nn.Module):
 ####################################### VGG Loss
 
 from torchvision import models
-class VGG19_torch(torch.nn.Module):
+class VGG19_torch(paddle.nn.Layer):
     def __init__(self, requires_grad=False):
         super(VGG19_torch, self).__init__()
         vgg_pretrained_features = models.vgg19(pretrained=True).features
-        self.slice1 = torch.nn.Sequential()
-        self.slice2 = torch.nn.Sequential()
-        self.slice3 = torch.nn.Sequential()
-        self.slice4 = torch.nn.Sequential()
-        self.slice5 = torch.nn.Sequential()
+        self.slice1 = paddle.nn.Sequential()
+        self.slice2 = paddle.nn.Sequential()
+        self.slice3 = paddle.nn.Sequential()
+        self.slice4 = paddle.nn.Sequential()
+        self.slice5 = paddle.nn.Sequential()
         for x in range(2):
             self.slice1.add_module(str(x), vgg_pretrained_features[x])
         for x in range(2, 7):
@@ -860,7 +861,7 @@ class VGG19_torch(torch.nn.Module):
         out = [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5]
         return out
 
-class VGGLoss_torch(nn.Module):
+class VGGLoss_torch(nn.Layer):
     def __init__(self, gpu_ids):
         super(VGGLoss_torch, self).__init__()
         self.vgg = VGG19_torch().cuda()

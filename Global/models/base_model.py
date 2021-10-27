@@ -2,11 +2,11 @@
 # Licensed under the MIT License.
 
 import os
-import torch
+import paddle
 import sys
 
 
-class BaseModel(torch.nn.Module):
+class BaseModel(paddle.nn.Layer):
     def name(self):
         return "BaseModel"
 
@@ -14,7 +14,7 @@ class BaseModel(torch.nn.Module):
         self.opt = opt
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
-        self.Tensor = torch.cuda.FloatTensor if self.gpu_ids else torch.Tensor
+        self.Tensor = paddle.to_tensor(place=paddle.CUDAPlace()) if self.gpu_ids else paddle.Tensor   #todo
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
 
     def set_input(self, input):
@@ -46,14 +46,14 @@ class BaseModel(torch.nn.Module):
     def save_network(self, network, network_label, epoch_label, gpu_ids):
         save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
         save_path = os.path.join(self.save_dir, save_filename)
-        torch.save(network.cpu().state_dict(), save_path)
-        if len(gpu_ids) and torch.cuda.is_available():
+        paddle.save(network.cpu().state_dict(), save_path)
+        if len(gpu_ids) and paddle.device.is_compiled_with_cuda():
             network.cuda()
 
     def save_optimizer(self, optimizer, optimizer_label, epoch_label):
         save_filename = "%s_optimizer_%s.pth" % (epoch_label, optimizer_label)
         save_path = os.path.join(self.save_dir, save_filename)
-        torch.save(optimizer.state_dict(), save_path)
+        paddle.save(optimizer.state_dict(), save_path)
 
     def load_optimizer(self, optimizer, optimizer_label, epoch_label, save_dir=""):
         save_filename = "%s_optimizer_%s.pth" % (epoch_label, optimizer_label)
@@ -64,7 +64,7 @@ class BaseModel(torch.nn.Module):
         if not os.path.isfile(save_path):
             print("%s not exists yet!" % save_path)
         else:
-            optimizer.load_state_dict(torch.load(save_path))
+            optimizer.load_state_dict(paddle.load(save_path))
 
     # helper loading function that can be used by subclasses
     def load_network(self, network, network_label, epoch_label, save_dir=""):
@@ -80,12 +80,12 @@ class BaseModel(torch.nn.Module):
             # if network_label == 'G':
             #     raise('Generator must exist!')
         else:
-            # network.load_state_dict(torch.load(save_path))
+            # network.load_state_dict(paddle.load(save_path))
             try:
                 # print(save_path)
-                network.load_state_dict(torch.load(save_path))
+                network.load_state_dict(paddle.load(save_path))
             except:
-                pretrained_dict = torch.load(save_path)
+                pretrained_dict = paddle.load(save_path)
                 model_dict = network.state_dict()
                 try:
                     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}

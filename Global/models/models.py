@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import torch
+import paddle
 
 
 def create_model(opt):
@@ -22,7 +23,7 @@ def create_model(opt):
 
     if opt.isTrain and len(opt.gpu_ids) > 1:
         # pass
-        model = torch.nn.DataParallel(model, device_ids=opt.gpu_ids)
+        model = paddle.DataParallel(model, device_ids=opt.gpu_ids)
 
     return model
 
@@ -42,6 +43,6 @@ def create_da_model(opt):
 
     if opt.isTrain and len(opt.gpu_ids) > 1:
         #pass
-        model = torch.nn.DataParallel(model, device_ids=opt.gpu_ids)
+        model = paddle.DataParallel(model, device_ids=opt.gpu_ids)
 
     return model

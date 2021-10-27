@@ -1,11 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-# import torch.utils.data as data
-from PIL import Image
-# import torchvision.transforms as transforms
-import paddle.vision.transforms as transforms
 import paddle
+import paddle.io
+from PIL import Image
+import paddle.vision.transforms as transforms
+from torchvision_paddle.Lambda import Lambda
 import numpy as np
 import random
 from torchvision_paddle.Lambda import Lambda
@@ -50,10 +50,10 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
     transform_list = []
     if 'resize' in opt.resize_or_crop:
         osize = [opt.loadSize, opt.loadSize]
-        transform_list.append(transforms.resize(osize, method))
+        transform_list.append(transforms.Resize(osize, method))
     elif 'scale_width' in opt.resize_or_crop:
-    #    transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.loadSize, method)))  ## Here , We want the shorter side to match 256, and Scale will finish it.
-        transform_list.append(transforms.Scale(256,method))
+    #    transform_list.append(Lambda(lambda img: __scale_width(img, opt.loadSize, method)))  ## Here , We want the shorter side to match 256, and Resize will finish it.
+        transform_list.append(transforms.Resize(256,method))
 
     if 'crop' in opt.resize_or_crop:
         if opt.isTrain:
@@ -72,10 +72,10 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
         base = float(2 ** opt.n_downsample_global)
         if opt.netG == 'local':
             base *= (2 ** opt.n_local_enhancers)
-        transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base, method)))
+        transform_list.append(Lambda(lambda img: __make_power_2(img, base, method)))
 
     if opt.isTrain and not opt.no_flip:
-        transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
+        transform_list.append(Lambda(lambda img: __flip(img, params['flip'])))
 
     transform_list += [transforms.ToTensor()]
 
