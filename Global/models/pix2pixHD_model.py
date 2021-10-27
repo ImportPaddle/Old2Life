@@ -2,11 +2,13 @@
 # Licensed under the MIT License.
 
 import numpy as np
-import torch
+# import torch
+import paddle
 import os
-from torch.autograd import Variable
-from util.image_pool import ImagePool
-from .base_model import BaseModel
+from paddle.autograd import PyLayer
+# from torch.autograd import Variable
+from Global.util.image_pool import ImagePool
+from base_model import BaseModel
 from . import networks
 
 class Pix2PixHDModel(BaseModel):
@@ -21,8 +23,6 @@ class Pix2PixHDModel(BaseModel):
     
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
-        if opt.resize_or_crop != 'none' or not opt.isTrain: # when training at full res this causes OOM
-            torch.backends.cudnn.benchmark = True
         self.isTrain = opt.isTrain
         self.use_features = opt.instance_feat or opt.label_feat   ## Clearly it is false
         self.gen_features = self.use_features and not self.opt.load_features ## it is also false
@@ -76,7 +76,7 @@ class Pix2PixHDModel(BaseModel):
             self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss, opt.Smooth_L1)
             
             self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)   
-            self.criterionFeat = torch.nn.L1Loss()
+            self.criterionFeat = paddle.nn.L1Loss()
 
             # self.criterionImage = torch.nn.SmoothL1Loss()
             if not opt.no_vgg_loss:
@@ -90,18 +90,18 @@ class Pix2PixHDModel(BaseModel):
             params = list(self.netG.parameters())
             if self.gen_features:              
                 params += list(self.netE.parameters())         
-            self.optimizer_G = torch.optim.Adam(params, lr=opt.lr, betas=(opt.beta1, 0.999))                            
+            self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1, beta2=0.999)
 
             # optimizer D                        
             params = list(self.netD.parameters())    
-            self.optimizer_D = torch.optim.Adam(params, lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_D = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1, beta2=0.999)
 
             print("---------- Optimizers initialized -------------")
 
             if opt.continue_train:
                 self.load_optimizer(self.optimizer_D, 'D', opt.which_epoch)
                 self.load_optimizer(self.optimizer_G, "G", opt.which_epoch)
-                for param_groups in self.optimizer_D.param_groups:
+                for param_groups in self.optimizer_D._parameter_list:
                     self.old_lr=param_groups['lr']
 
                 print("---------- Optimizers reloaded -------------")
@@ -116,7 +116,8 @@ class Pix2PixHDModel(BaseModel):
             # create one-hot vector for label map 
             size = label_map.size()
             oneHot_size = (size[0], self.opt.label_nc, size[2], size[3])
-            input_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
+            # input_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
+            input_label=paddle.zeros(oneHot_size,dtype=paddle.float32)
             input_label = input_label.scatter_(1, label_map.data.long().cuda(), 1.0)
             if self.opt.data_type == 16:
                 input_label = input_label.half()
@@ -125,8 +126,8 @@ class Pix2PixHDModel(BaseModel):
         if not self.opt.no_instance:
             inst_map = inst_map.data.cuda()
             edge_map = self.get_edges(inst_map)
-            input_label = torch.cat((input_label, edge_map), dim=1)         
-        input_label = Variable(input_label, volatile=infer)
+            input_label = paddle.concat((input_label, edge_map), axis=1)
+        input_label = PyLayer(input_label, volatile=infer)
 
         # real images for training
         if real_image is not None:
@@ -234,7 +235,7 @@ class Pix2PixHDModel(BaseModel):
             input_concat = torch.cat((input_label, feat_map), dim=1)
         else:
             input_concat = input_label        
-           
+
         if torch.__version__.startswith('0.4'):
             with torch.no_grad():
                 fake_image = self.netG.forward(input_concat)

@@ -17,7 +17,7 @@ class Pix2PixModel(paddle.nn.layer):
         super().__init__()
         self.opt = opt
         self.FloatTensor = paddle.float32
-        self.ByteTensor = paddle.bool# todo 注意 torch.ByteTensor
+        # self.ByteTensor = paddle.uint8# todo 注意 torch.ByteTensor
 
         self.netG, self.netD, self.netE = self.initialize_networks(opt)
 
@@ -185,8 +185,8 @@ class Pix2PixModel(paddle.nn.layer):
         fake_image = self.netG(input_semantics, degraded_image, z=z)
 
         assert (
-            not compute_kld_loss
-        ) or self.opt.use_vae, "You cannot compute KLD loss if opt.use_vae == False"
+                   not compute_kld_loss
+               ) or self.opt.use_vae, "You cannot compute KLD loss if opt.use_vae == False"
 
         return fake_image, KLD_loss
 
@@ -223,15 +223,16 @@ class Pix2PixModel(paddle.nn.layer):
             real = []
             for p in pred:
                 fake.append([tensor[: tensor.shape[0] // 2] for tensor in p])
-                real.append([tensor[tensor.shape[0] // 2 :] for tensor in p])
+                real.append([tensor[tensor.shape[0] // 2:] for tensor in p])
         else:
             fake = pred[: pred.shape[0] // 2]
-            real = pred[pred.shape[0] // 2 :]
+            real = pred[pred.shape[0] // 2:]
 
         return fake, real
 
     def get_edges(self, t):
-        edge = self.ByteTensor(t.shape).zero_()
+        # edge = self.ByteTensor(t.shape).zero_()
+        edge = paddle.zeros_like(t, dtype=paddle.uint8)
         edge[:, :, :, 1:] = edge[:, :, :, 1:] | (t[:, :, :, 1:] != t[:, :, :, :-1])
         edge[:, :, :, :-1] = edge[:, :, :, :-1] | (t[:, :, :, 1:] != t[:, :, :, :-1])
         edge[:, :, 1:, :] = edge[:, :, 1:, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
