@@ -12,7 +12,7 @@ from util.image_pool import ImagePool
 from models.base_model import BaseModel
 from models import networks
 import math
-from models.NonLocal_feature_mapping_model import Mapping_Model_with_mask_2,Mapping_Model_with_mask
+from models.NonLocal_feature_mapping_model import *
 
 
 class Mapping_Model(nn.Layer):
@@ -143,10 +143,10 @@ class Pix2PixHDModel_Mapping(BaseModel):
             self.netG_A.eval()
             self.netG_B.eval()
 
-        if opt.gpu_ids:
-            self.netG_A.cuda(opt.gpu_ids[0])
-            self.netG_B.cuda(opt.gpu_ids[0])
-            self.mapping_net.cuda(opt.gpu_ids[0])
+        # if opt.gpu_ids:
+        #     self.netG_A.cuda(opt.gpu_ids[0])
+        #     self.netG_B.cuda(opt.gpu_ids[0])
+        #     self.mapping_net.cuda(opt.gpu_ids[0])
         
         if not self.isTrain:
             self.load_network(self.mapping_net, "mapping_net", opt.which_epoch)
@@ -214,26 +214,27 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
     def encode_input(self, label_map, inst_map=None, real_image=None, feat_map=None, infer=False):             
         if self.opt.label_nc == 0:
-            input_label = label_map.data.cuda()
+            input_label = label_map
         else:
             # create one-hot vector for label map 
-            size = label_map.size()
+            size = label_map.shape
             oneHot_size = (size[0], self.opt.label_nc, size[2], size[3])
-            input_label = paddle.to_tensor(paddle.Tensor.size(oneHot_size), place=paddle.CUDAPlace()).zero_()#todo
-            input_label = input_label.scatter_(1, label_map.data.long().cuda(), 1.0)
+            # input_label = paddle.to_tensor(paddle.Tensor.size(oneHot_size)).zero_()# todo
+            input_label = paddle.ones(oneHot_size)
+            input_label = input_label.scatter_(1, label_map.astype(paddle.int64), 1.0) # todo long
             if self.opt.data_type == 16:
-                input_label = input_label.half()
+                input_label = input_label.astype(paddle.int16)
 
         # get edges from instance map
         if not self.opt.no_instance:
-            inst_map = inst_map.data.cuda()
+            inst_map = inst_map
             edge_map = self.get_edges(inst_map)
             input_label = paddle.concat((input_label, edge_map), axis=1)
         input_label = paddle.to_tensor(input_label, stop_gradient=False)
 
         # real images for training
         if real_image is not None:
-            real_image = paddle.to_tensor(real_image.data.cuda())
+            real_image = paddle.to_tensor(real_image)
 
         return input_label, inst_map, real_image, feat_map
 
@@ -266,7 +267,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
         image_feat = self.netG_B.forward(real_image, flow='enc')
 
         loss_feat_l2_stage_1=0
-        loss_feat_l2 = self.criterionFeat_feat(label_feat_map, image_feat.data) * self.opt.l2_feat
+        loss_feat_l2 = self.criterionFeat_feat(label_feat_map, image_feat) * self.opt.l2_feat
             
 
         if self.opt.feat_gan:
@@ -325,12 +326,8 @@ class Pix2PixHDModel_Mapping(BaseModel):
     def inference(self, label, inst):
 
         use_gpu = len(self.opt.gpu_ids) > 0
-        if use_gpu:
-            input_concat = label.data.cuda()
-            inst_data = inst.cuda()
-        else:
-            input_concat = label.data
-            inst_data = inst
+        input_concat = label
+        inst_data = inst
 
         label_feat = self.netG_A.forward(input_concat, flow="enc")
 

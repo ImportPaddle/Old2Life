@@ -4,8 +4,8 @@
 import importlib
 # import torch.utils.data
 import paddle
-from base_dataset import BaseDataset
-from face_dataset import FaceTestDataset
+from .base_dataset import BaseDataset
+from .face_dataset import FaceTestDataset
 
 
 def create_dataloader(opt):

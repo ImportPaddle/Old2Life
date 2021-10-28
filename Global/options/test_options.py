@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 # coding=utf-8
 
-from base_options import BaseOptions
+from .base_options import BaseOptions
 
 
 class TestOptions(BaseOptions):

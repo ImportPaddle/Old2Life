@@ -98,11 +98,10 @@ if __name__ == "__main__":
 
     opt = TestOptions().parse(save=False)
     parameter_set(opt)
-    print(opt)
-    # model = Pix2PixHDModel_Mapping()
-    #
-    # model.initialize(opt)
-    # model.eval()
+    model = Pix2PixHDModel_Mapping()
+
+    model.initialize(opt)
+    model.eval()
 
     if not os.path.exists(opt.outputs_dir + "/" + "input_image"):
         os.makedirs(opt.outputs_dir + "/" + "input_image")
@@ -160,21 +159,25 @@ if __name__ == "__main__":
             if opt.test_mode == "Crop":
                 input = data_transforms_rgb_old(input)
             origin = input
-            print('++++++++++++++++++++++++++')
-            # input=np.array(input).astype('uint8')
+            print('input:',input)
+            input=np.array(input).astype('uint8')
+            print("input:",input.shape)
             input=img_transform(input)
             # input = input.unsqueeze(0)
-            print('++++++++++++++++++++++++++')
             input = img_transform(input)
             mask = paddle.zeros_like(input)
         ### Necessary input
 
-        try:
-            with paddle.no_grad():
-                generated = model.inference(input, mask)
-        except Exception as ex:
-            print("Skip %s due to an error:\n%s" % (input_name, str(ex)))
-            continue
+        with paddle.no_grad():
+            generated = model.inference(input, mask)
+
+        # try:
+        #     with paddle.no_grad():
+        #         generated = model.inference(input, mask)
+        #
+        # except Exception as ex:
+        #     print("Skip %s due to an error:\n%s" % (input_name, str(ex)))
+        #     continue
 
         if input_name.endswith(".jpg"):
             input_name = input_name[:-4] + ".png"

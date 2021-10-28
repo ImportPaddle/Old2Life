@@ -9,20 +9,30 @@ import numpy as np
 
 # from util.util import SwitchNorm2d
 import paddle.nn.functional as F
-import models.initializer
+import models.initializer as initializer
 
 ###############################################################################
 # Functions
 ###############################################################################
+
 def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find("Conv") != -1:
-        # m.weight.normal_(0.0, 0.02)
-        m.weight.set_value(paddle.normal(0.0, 0.02))
-    elif classname.find("BatchNorm2D") != -1:
-        # m.weight.normal_(1.0, 0.02)
-        m.weight.set_value(paddle.normal(1.0, 0.02))
-        m.bias.fill_(0)
+    if isinstance(m, nn.Conv2D):
+        initializer.normal_(m.weight,mean=0.0,std=0.02)
+    elif isinstance(m, nn.BatchNorm2D):
+        initializer.normal_(m.weight,1.0,0.02)
+        initializer.fill_(m.bias, 0)
+
+# def weights_init(m):
+#     classname = m.__class__.__name__
+#     if classname.find("Conv") != -1:
+#         # m.weight.normal_(0.0, 0.02)
+#         print(m.weight)
+#         m.weight.set_value(paddle.normal(0.0, 0.02))
+#         raise
+#     elif classname.find("BatchNorm2D") != -1:
+#         # m.weight.normal_(1.0, 0.02)
+#         m.weight.set_value(paddle.normal(1.0, 0.02))
+#         m.bias.fill_(0)
 
 
 def get_norm_layer(norm_type="instance"):
@@ -32,8 +42,8 @@ def get_norm_layer(norm_type="instance"):
         norm_layer = functools.partial(nn.InstanceNorm2D)
     elif norm_type == "spectral":
         norm_layer = paddle.nn.utils.spectral_norm()
-    elif norm_type == "SwitchNorm":
-        norm_layer = SwitchNorm2d
+    # elif norm_type == "SwitchNorm":
+    #     norm_layer = SwitchNorm2d
     else:
         raise NotImplementedError("normalization layer [%s] is not found" % norm_type)
     return norm_layer
@@ -57,8 +67,8 @@ def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_
         # if opt.self_gen:
         if opt.use_v2:
             netG = GlobalGenerator_DCDCv2(input_nc, output_nc, ngf, k_size, n_downsample_global, norm_layer, opt=opt)
-        else:
-            netG = GlobalGenerator_v2(input_nc, output_nc, ngf, k_size, n_downsample_global, n_blocks_global, norm_layer, opt=opt)
+        # else:
+        #     netG = GlobalGenerator_v2(input_nc, output_nc, ngf, k_size, n_downsample_global, n_blocks_global, norm_layer, opt=opt)
     else:
         raise('generator not implemented!')
     print(netG)
@@ -831,10 +841,11 @@ class GANLoss(nn.Layer):
 ####################################### VGG Loss
 
 # from torchvision import models
+import x2paddle.models as models
 class VGG19_torch(paddle.nn.Layer):
     def __init__(self, requires_grad=False):
         super(VGG19_torch, self).__init__()
-        vgg_pretrained_features = models.vgg19(pretrained=True).features
+        vgg_pretrained_features = models.vgg19_pth(pretrained=True).features
         self.slice1 = paddle.nn.Sequential()
         self.slice2 = paddle.nn.Sequential()
         self.slice3 = paddle.nn.Sequential()

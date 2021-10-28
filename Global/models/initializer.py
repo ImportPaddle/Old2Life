@@ -65,6 +65,9 @@ def _no_grad_fill_(tensor, val):
     with paddle.no_grad():
         tensor.set_value(paddle.full_like(tensor, fill_value=val))
         return tensor
+def fill_(tensor, val):
+    tensor.set_value(paddle.full_like(tensor, fill_value=val))
+    return tensor
 
 
 def _no_grad_zero_(tensor):
