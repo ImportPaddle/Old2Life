@@ -1,5 +1,7 @@
 .DS_Store
-.idea
+
+.idea/
+
 *.pyc
 
 output/
@@ -19,3 +21,5 @@ __pycache__
 *.dat
 
 Synchronized-BatchNorm-PyTorch/
+
+
