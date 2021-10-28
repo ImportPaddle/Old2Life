@@ -124,7 +124,7 @@ if __name__ == "__main__":
         stage_2_command = (
             "python detect_all_dlib.py --url " + stage_2_input_dir + " --save_url " + stage_2_output_dir
         )
-    # run_cmd(stage_2_command)
+    run_cmd(stage_2_command)
     print("Finish Stage 2 ...")
     print("\n")
 
@@ -166,7 +166,7 @@ if __name__ == "__main__":
             + stage_3_output_dir
             + " --no_parsing_map"
         )
-    # run_cmd(stage_3_command)
+    run_cmd(stage_3_command)
     print("Finish Stage 3 ...")
     print("\n")
 
@@ -196,7 +196,7 @@ if __name__ == "__main__":
             + " --save_url "
             + stage_4_output_dir
         )
-    # run_cmd(stage_4_command)
+    run_cmd(stage_4_command)
     print("Finish Stage 4 ...")
     print("\n")
 
