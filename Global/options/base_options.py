@@ -355,7 +355,7 @@ class BaseOptions:
         # if len(self.opt.gpu_ids) > 0:
         #     # pass
         #     # torch.cuda.set_device(self.opt.gpu_ids[0])
-        #     paddle.set_device(f'gpu:{self.opt.gpu_ids[0]}')# TODO 注释掉了
+        #     paddle.set_device(f'gpu:{self.opt.gpu_ids[0]}')# TODO
 
         args = vars(self.opt)
 

@@ -13,7 +13,7 @@ from PIL import Image
 # import torchvision.utils as vutils
 # import torchvision.transforms as transforms
 import paddle
-import torchvision_paddle.utils as vutils
+import utils as vutils
 import paddle.vision.transforms as transforms
 import numpy as np
 import cv2
@@ -98,7 +98,6 @@ if __name__ == "__main__":
 
     opt = TestOptions().parse(save=False)
     parameter_set(opt)
-    print(opt)
     model = Pix2PixHDModel_Mapping()
 
     model.initialize(opt)
@@ -123,6 +122,7 @@ if __name__ == "__main__":
     img_transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))]
     )
+
     mask_transform = transforms.ToTensor()
 
     for i in range(dataset_size):
@@ -132,7 +132,7 @@ if __name__ == "__main__":
         if not os.path.isfile(input_file):
             print("Skipping non-file %s" % input_name)
             continue
-
+        print(input_file)
         input = Image.open(input_file).convert("RGB")
 
         print("Now you are processing %s" % (input_name))
@@ -159,26 +159,25 @@ if __name__ == "__main__":
             if opt.test_mode == "Crop":
                 input = data_transforms_rgb_old(input)
             origin = input
-
-            import matplotlib.pyplot as plt
-            plt.figure('boy')
-            plt.imshow(input)
-
-            print('input:',input.__dict__,input.size)
-            # input=np.array(input).astype('uint8')
-
-
+            print('input:',input)
+            input=np.array(input).astype('uint8')
+            print("input:",input.shape)
+            input=img_transform(input)
+            # input = input.unsqueeze(0)
             input = img_transform(input)
-            input = input.unsqueeze(0)
             mask = paddle.zeros_like(input)
         ### Necessary input
 
-        try:
-            with paddle.no_grad():
-                generated = model.inference(input, mask)
-        except Exception as ex:
-            print("Skip %s due to an error:\n%s" % (input_name, str(ex)))
-            continue
+        with paddle.no_grad():
+            generated = model.inference(input, mask)
+
+        # try:
+        #     with paddle.no_grad():
+        #         generated = model.inference(input, mask)
+        #
+        # except Exception as ex:
+        #     print("Skip %s due to an error:\n%s" % (input_name, str(ex)))
+        #     continue
 
         if input_name.endswith(".jpg"):
             input_name = input_name[:-4] + ".png"
