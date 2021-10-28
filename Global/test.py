@@ -13,7 +13,7 @@ from PIL import Image
 # import torchvision.utils as vutils
 # import torchvision.transforms as transforms
 import paddle
-import utils as vutils
+import torutils as vutils
 import paddle.vision.transforms as transforms
 import numpy as np
 import cv2
