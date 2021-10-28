@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+*.pyc
 
 output/
 
@@ -13,7 +14,7 @@ save/
 
 *.zip
 
-__pycache__/
+__pycache__
 
 *.dat
 
