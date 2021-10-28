@@ -1,89 +1,106 @@
+#   Copyright (c) 2021 PPViT Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""
+Fold operation, which is usually equivalent to 'col2im' operation.
+Current paddle version (2.1) is not supported native Fold operation.
+This hack is based on for-loop, which may be optimized in the future.
+"""
+
 import numpy as np
+import paddle
 
 
-def get_indices(X_shape, HF, WF, stride, pad):
+def fold(inputs, output_size, kernel_size, padding, stride):
     """
-        Returns index matrices in order to transform our input image into a matrix.
-        Parameters:
-        -X_shape: Input image shape.
-        -HF: filter height.
-        -WF: filter width.
-        -stride: stride value.
-        -pad: padding value.
-        Returns:
-        -i: matrix of index i.
-        -j: matrix of index j.
-        -d: matrix of index d. 
-            (Use to mark delimitation for each channel
-            during multi-dimensional arrays indexing).
+    Args:
+        x: Tensor, input tensor, only support 3D tensor, [Batch, C * kernel_size * kernel_size, L]
+        output_size, Tuple/List, contains the height and width of the output tensor, len = 2
+        kernel_size: int, kernel size
+        padding: int, num of pad around the input
+        stride: int, stride for sliding window
     """
-    # get input size
-    m, n_C, n_H, n_W = X_shape
 
-    # get output size
-    out_h = int((n_H + 2 * pad - HF) / stride) + 1
-    out_w = int((n_W + 2 * pad - WF) / stride) + 1
-  
-    # ----Compute matrix of index i----
+    B, D, L = inputs.shape
+    H, W = output_size
+    C = int(D / (kernel_size * kernel_size))
+    out_h = (H + 2*padding -kernel_size) // stride + 1
+    out_w = (W + 2*padding -kernel_size) // stride + 1
 
-    # Level 1 vector.
-    level1 = np.repeat(np.arange(HF), WF)
-    # Duplicate for the other channels.
-    level1 = np.tile(level1, n_C)
-    # Create a vector with an increase by 1 at each level.
-    everyLevels = stride * np.repeat(np.arange(out_h), out_w)
-    # Create matrix of index i at every levels for each channel.
-    i = level1.reshape(-1, 1) + everyLevels.reshape(1, -1)
-
-    # ----Compute matrix of index j----
+    inputs = inputs.reshape([B, C, kernel_size, kernel_size, out_h, out_w])
     
-    # Slide 1 vector.
-    slide1 = np.tile(np.arange(WF), HF)
-    # Duplicate for the other channels.
-    slide1 = np.tile(slide1, n_C)
-    # Create a vector with an increase by 1 at each slide.
-    everySlides = stride * np.tile(np.arange(out_w), out_h)
-    # Create matrix of index j at every slides for each channel.
-    j = slide1.reshape(-1, 1) + everySlides.reshape(1, -1)
+    img = paddle.zeros([B, C, H + 2 * padding + stride - 1, W + 2 * padding + stride -1], dtype=inputs.dtype)
 
-    # ----Compute matrix of index d----
+    for y in range(kernel_size):
+        y_max = y + stride * out_h
+        for x in range(kernel_size):
+            x_max = x + stride * out_w
+            img[:, :, y:y_max:stride, x:x_max:stride] += inputs[:, :, y, x, :, :]
 
-    # This is to mark delimitation for each channel
-    # during multi-dimensional arrays indexing.
-    d = np.repeat(np.arange(n_C), HF * WF).reshape(-1, 1)
-
-    return i, j, d
+    return img[:, :, padding: H + padding, padding: W + padding]
 
 
-def fold(dX_col, X_shape, HF, WF, stride, pad):
-    """
-        This fold!
-        Transform our matrix back to the input image.
-        Parameters:
-        - dX_col: matrix with error.
-        - X_shape: input image shape.
-        - HF: filter height.
-        - WF: filter width.
-        - stride: stride value.
-        - pad: padding value.
-        Returns:
-        -x_padded: input image with error.
-    """
-    # Get input size
-    N, D, H, W = X_shape
-    # Add padding if needed.
-    H_padded, W_padded = H + 2 * pad, W + 2 * pad
-    X_padded = np.zeros((N, D, H_padded, W_padded))
-    
-    # Index matrices, necessary to transform our input image into a matrix. 
-    i, j, d = get_indices(X_shape, HF, WF, stride, pad)
-    # Retrieve batch dimension by spliting dX_col N times: (X, Y) => (N, X, Y)
-    dX_col_reshaped = np.array(np.hsplit(dX_col, N))
-    # Reshape our matrix back to image.
-    # slice(None) is used to produce the [::] effect which means "for every elements".
-    np.add.at(X_padded, (slice(None), d, i, j), dX_col_reshaped)
-    # Remove padding from new image if needed.
-    if pad == 0:
-        return X_padded
-    elif type(pad) is int:
-        return X_padded[pad:-pad, pad:-pad, :, :]
+
+#def main():
+#    paddle.set_device('cpu')
+#    arr = [
+#        [1, 1, 1, 1, 2, 2, 2, 2],
+#        [1, 1, 1, 1, 2, 2, 2, 2],
+#        [1, 1, 1, 1, 2, 2, 2, 2],
+#        [1, 1, 1, 1, 2, 2, 2, 2],
+#        [3, 3, 3, 3, 4, 4, 4, 4],
+#        [3, 3, 3, 3, 4, 4, 4, 4],
+#        [3, 3, 3, 3, 4, 4, 4, 4],
+#        [3, 3, 3, 3, 4, 4, 4, 4],
+#    ]
+#    arr = np.array(arr)
+#    tmp = paddle.to_tensor(arr, dtype='float32')
+#    tmp = tmp.reshape([1, 1, 8, 8])
+#
+#    unfold = paddle.nn.Unfold(3, 1, 1)
+#    out = unfold(tmp)
+#
+#    for i in range(out.shape[-1]):
+#        row = out[:, :, i].astype('int8').numpy()
+#        print(row)
+#    out = fold(out, output_size=(8, 8), kernel_size=3, padding=1, stride=1)
+#    print(out)
+#
+#if __name__ == "__main__":
+#    main()
+#
+#
+## k=3, p=2, s=2
+##[[[4. , 2. , 4. , 2. , 8. , 4. , 8. , 4. ],
+##   2. , 1. , 2. , 1. , 4. , 2. , 4. , 2. ],
+##   4. , 2. , 4. , 2. , 8. , 4. , 8. , 4. ],
+##   2. , 1. , 2. , 1. , 4. , 2. , 4. , 2. ],
+##   12., 6. , 12., 6. , 16., 8. , 16., 8. ],
+##   6. , 3. , 6. , 3. , 8. , 4. , 8. , 4. ],
+##   12., 6. , 12., 6. , 16., 8. , 16., 8. ],
+##   6. , 3. , 6. , 3. , 8. , 4. , 8. , 4. ]]]])
+#
+#
+## k = 3, p=1, s=1
+## [[[[4. , 6. , 6. , 6. , 12., 12., 12., 8. ],
+##     [6. , 9. , 9. , 9. , 18., 18., 18., 12.],
+##     [6. , 9. , 9. , 9. , 18., 18., 18., 12.],
+##     [6. , 9. , 9. , 9. , 18., 18., 18., 12.],
+##     [18., 27., 27., 27., 36., 36., 36., 24.],
+##     [18., 27., 27., 27., 36., 36., 36., 24.],
+##     [18., 27., 27., 27., 36., 36., 36., 24.],
+##     [12., 18., 18., 18., 24., 24., 24., 16.]]]])
+##
+#
