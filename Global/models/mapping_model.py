@@ -8,11 +8,11 @@ import paddle.nn.functional as F
 import os
 import functools
 # from torch.autograd import Variable
-from Global.util.image_pool import ImagePool
-from Global.models.base_model import BaseModel
-from Global.models import networks
+from util.image_pool import ImagePool
+from models.base_model import BaseModel
+from models import networks
 import math
-from Global.models.NonLocal_feature_mapping_model import *
+from models.NonLocal_feature_mapping_model import Mapping_Model_with_mask_2,Mapping_Model_with_mask
 
 
 class Mapping_Model(nn.Layer):

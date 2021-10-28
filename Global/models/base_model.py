@@ -46,7 +46,7 @@ class BaseModel(paddle.nn.Layer):
     def save_network(self, network, network_label, epoch_label, gpu_ids):
         save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
         save_path = os.path.join(self.save_dir, save_filename)
-        paddle.save(network.cpu().state_dict(), save_path)
+        paddle.save(network.state_dict(), save_path)
         if len(gpu_ids) and paddle.device.is_compiled_with_cuda():
             network.cuda()
 
@@ -101,7 +101,7 @@ class BaseModel(paddle.nn.Layer):
                         % network_label
                     )
                     for k, v in pretrained_dict.items():
-                        if v.size() == model_dict[k].size():
+                        if v.shape == model_dict[k].shape:
                             model_dict[k] = v
 
                     if sys.version_info >= (3, 0):
@@ -112,7 +112,7 @@ class BaseModel(paddle.nn.Layer):
                         not_initialized = Set()
 
                     for k, v in model_dict.items():
-                        if k not in pretrained_dict or v.size() != pretrained_dict[k].size():
+                        if k not in pretrained_dict or v.shape != pretrained_dict[k].shape:
                             not_initialized.add(k.split(".")[0])
 
                     print(sorted(not_initialized))

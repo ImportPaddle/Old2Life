@@ -3,13 +3,13 @@
 
 import paddle
 import paddle.nn as nn
-import Global.fold as fold
+import fold as fold
 import functools
 import numpy as np
 
-# from Global.util.util import SwitchNorm2d
+# from util.util import SwitchNorm2d
 import paddle.nn.functional as F
-from Face_Enhancement.models.networks import initializer
+import models.initializer
 
 ###############################################################################
 # Functions
@@ -17,10 +17,12 @@ from Face_Enhancement.models.networks import initializer
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find("Conv") != -1:
-        m.weight.data.normal_(0.0, 0.02)
+        # m.weight.normal_(0.0, 0.02)
+        m.weight.set_value(paddle.normal(0.0, 0.02))
     elif classname.find("BatchNorm2D") != -1:
-        m.weight.data.normal_(1.0, 0.02)
-        m.bias.data.fill_(0)
+        # m.weight.normal_(1.0, 0.02)
+        m.weight.set_value(paddle.normal(1.0, 0.02))
+        m.bias.fill_(0)
 
 
 def get_norm_layer(norm_type="instance"):
@@ -380,7 +382,7 @@ class Encoder(nn.Layer):
         outputs_mean = outputs.clone()
         inst_list = np.unique(inst.cpu().numpy().astype(int))
         for i in inst_list:
-            for b in range(input.size()[0]):
+            for b in range(input.shape[0]):
                 indices = (inst[b : b + 1] == int(i)).nonzero()  # n x 4
                 for j in range(self.output_nc):
                     output_ins = outputs[indices[:, 0] + b, indices[:, 1] + j, indices[:, 2], indices[:, 3]]
@@ -459,17 +461,17 @@ class NonLocalBlock2D_with_mask_Res(nn.Layer):
         self.res_block = nn.Sequential(*model)
 
     def forward(self, x, mask):  ## The shape of mask is Batch*1*H*W
-        batch_size = x.size(0)
+        batch_size = x.shape[0]
 
-        g_x = self.g(x).view(batch_size, self.inter_channels, -1)
+        g_x = self.g(x).reshape([batch_size, self.inter_channels, -1])
 
         g_x = g_x.permute(0, 2, 1)
 
-        theta_x = self.theta(x).view(batch_size, self.inter_channels, -1)
+        theta_x = self.theta(x).reshape([batch_size, self.inter_channels, -1])
 
         theta_x = theta_x.permute(0, 2, 1)
 
-        phi_x = self.phi(x).view(batch_size, self.inter_channels, -1)
+        phi_x = self.phi(x).reshape([batch_size, self.inter_channels, -1])
 
         if self.cosin:
             theta_x = F.normalize(theta_x, axis=2)
@@ -482,23 +484,23 @@ class NonLocalBlock2D_with_mask_Res(nn.Layer):
         f_div_C = F.softmax(f, axis=2)
 
         tmp = 1 - mask
-        mask = F.interpolate(mask, (x.size(2), x.size(3)), mode="bilinear")
+        mask = F.interpolate(mask, (x.shape[2], x.shape[3]), mode="bilinear")
         mask[mask > 0] = 1.0
         mask = 1 - mask
 
-        tmp = F.interpolate(tmp, (x.size(2), x.size(3)))
+        tmp = F.interpolate(tmp, (x.shape[2], x.shape[3]))
         mask *= tmp
 
-        mask_expand = mask.view(batch_size, 1, -1)
-        mask_expand = mask_expand.repeat(1, x.size(2) * x.size(3), 1)
+        mask_expand = mask.reshape([batch_size, 1, -1])
+        mask_expand = mask_expand.repeat(1, x.shape[2] * x.shape[3], 1)
 
         # mask = 1 - mask
-        # mask=F.interpolate(mask,(x.size(2),x.size(3)))
+        # mask=F.interpolate(mask,(x.shape[2],x.shape[3]))
         # mask_expand=mask.view(batch_size,1,-1)
-        # mask_expand=mask_expand.repeat(1,x.size(2)*x.size(3),1)
+        # mask_expand=mask_expand.repeat(1,x.shape[2]*x.shape[3],1)
 
         if self.use_self:
-            mask_expand[:, range(x.size(2) * x.size(3)), range(x.size(2) * x.size(3))] = 1.0
+            mask_expand[:, range(x.shape[2] * x.shape[3]), range(x.shape[2] * x.shape[3])] = 1.0
 
         #    print(mask_expand.shape)
         #    print(f_div_C.shape)
@@ -513,7 +515,7 @@ class NonLocalBlock2D_with_mask_Res(nn.Layer):
 
         y = y.permute(0, 2, 1).contiguous()
 
-        y = y.view(batch_size, self.inter_channels, *x.size()[2:])
+        y = y.reshape([batch_size, self.inter_channels, *x.shape[2:]])
         W_y = self.W(y)
 
         W_y = self.res_block(W_y)
@@ -669,11 +671,11 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
         # input: [B,C,HW]
         # dim: scalar > 0
         # index: [B, HW]
-        views = [input.size(0)] + [1 if i!=dim else -1 for i in range(1, len(input.size()))]
-        expanse = list(input.size())
+        views = [input.shape[0]] + [1 if i!=dim else -1 for i in range(1, len(input.shape))]
+        expanse = list(input.shape)
         expanse[0] = -1
         expanse[dim] = -1
-        index = index.view(views).expand(expanse)
+        index = index.reshape(views).expand(expanse)
         return paddle.gather(input, axis=dim, index=index)
 
     def forward(self, z, mask):  ## The shape of mask is Batch*1*H*W
@@ -684,11 +686,11 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
 
         ## mask resize + dilation
         # tmp = 1 - mask
-        mask = F.interpolate(mask, (x.size(2), x.size(3)), mode="bilinear")
+        mask = F.interpolate(mask, (x.shape[2], x.shape[3]), mode="bilinear")
         mask[mask > 0] = 1.0
 
         # mask = 1 - mask
-        # tmp = F.interpolate(tmp, (x.size(2), x.size(3)))
+        # tmp = F.interpolate(tmp, (x.shape[2], x.shape[3]))
         # mask *= tmp
         # mask=1-mask
         ## 1: mask position 0: non-mask
@@ -727,10 +729,10 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
 
         ## mask resize + dilation
         # tmp = 1 - mask
-        mask = F.interpolate(mask, (x.size(2), x.size(3)), mode="bilinear")
+        mask = F.interpolate(mask, (x.shape[2], x.shape[3]), mode="bilinear")
         mask[mask > 0] = 1.0
         # mask = 1 - mask
-        # tmp = F.interpolate(tmp, (x.size(2), x.size(3)))
+        # tmp = F.interpolate(tmp, (x.shape[2], x.shape[3]))
         # mask *= tmp
         # mask=1-mask
         ## 1: mask position 0: non-mask
@@ -799,14 +801,14 @@ class GANLoss(nn.Layer):
             create_label = ((self.real_label_var is None) or
                             (self.real_label_var.numel() != input.numel()))
             if create_label:
-                real_tensor = self.Tensor(input.size()).fill_(self.real_label)
+                real_tensor = self.Tensor(input.shape).fill_(self.real_label)
                 self.real_label_var = paddle.to_tensor(real_tensor.astype(paddle.float32), stop_gradient=True)#todo
             target_tensor = self.real_label_var
         else:
             create_label = ((self.fake_label_var is None) or
                             (self.fake_label_var.numel() != input.numel()))
             if create_label:
-                fake_tensor = self.Tensor(input.size()).fill_(self.fake_label)
+                fake_tensor = self.Tensor(input.shape).fill_(self.fake_label)
                 self.fake_label_var = paddle.to_tensor(fake_tensor.astype(paddle.float32), stop_gradient=True)
             target_tensor = self.fake_label_var
         return target_tensor
