@@ -4,7 +4,7 @@
 import os
 from paddle import Tensor
 from collections import OrderedDict
-# from torch.autograd import Variable
+# from torch.autograd import Variablep
 from options.test_options import TestOptions
 from models.models import create_model
 from models.mapping_model import Pix2PixHDModel_Mapping

@@ -83,6 +83,7 @@ class BaseModel(paddle.nn.Layer):
             # network.load_state_dict(paddle.load(save_path))
             try:
                 # print(save_path)
+                print('path:',save_path)
                 network.load_state_dict(paddle.load(save_path))
             except:
                 pretrained_dict = paddle.load(save_path)
