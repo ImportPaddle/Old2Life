@@ -1,6 +1,7 @@
 .DS_Store
+.idea
+*.pyc
 
-<<<<<<< Updated upstream
 output/
 
 checkpoints/
@@ -13,11 +14,8 @@ save/
 
 *.zip
 
-__pycache__/
+__pycache__
 
 *.dat
 
 Synchronized-BatchNorm-PyTorch/
-=======
-*.bat
->>>>>>> Stashed changes
