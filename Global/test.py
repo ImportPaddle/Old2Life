@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import os
+from paddle import Tensor
 from collections import OrderedDict
 # from torch.autograd import Variable
 from options.test_options import TestOptions
@@ -13,15 +14,18 @@ from PIL import Image
 # import torchvision.utils as vutils
 # import torchvision.transforms as transforms
 import paddle
-import utils as vutils
+import torchvision_paddle.utils as vutils
 import paddle.vision.transforms as transforms
 import numpy as np
 import cv2
 
+def save_image(image_numpy, image_path):
+    image_pil = Image.fromarray(image_numpy)
+    image_pil.save(image_path)
+
 def data_transforms(img, method=Image.BILINEAR, scale=False):
 
     ow, oh = img.size
-    print(img.size)
     pw, ph = ow, oh
     if scale == True:
         if ow < oh:
@@ -111,6 +115,7 @@ if __name__ == "__main__":
         os.makedirs(opt.outputs_dir + "/" + "origin")
 
     input_loader = os.listdir(opt.test_input)
+    # input_loader = os.listdir('D://Desktop//plan//Old2Life//test_images//old')
     dataset_size = len(input_loader)
     input_loader.sort()
 
@@ -120,7 +125,8 @@ if __name__ == "__main__":
         mask_loader.sort()
 
     img_transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))]
+        [transforms.Normalize(mean=(127.5,127.5,127.5),std=(127.5,127.5,127.5),data_format='HWC'),
+         transforms.ToTensor()]
     )
 
     mask_transform = transforms.ToTensor()
@@ -132,8 +138,8 @@ if __name__ == "__main__":
         if not os.path.isfile(input_file):
             print("Skipping non-file %s" % input_name)
             continue
-        print(input_file)
         input = Image.open(input_file).convert("RGB")
+        input = np.array(input).astype('uint8')
 
         print("Now you are processing %s" % (input_name))
         if opt.NL_use_mask:
@@ -159,12 +165,8 @@ if __name__ == "__main__":
             if opt.test_mode == "Crop":
                 input = data_transforms_rgb_old(input)
             origin = input
-            print('input:',input)
-            input=np.array(input).astype('uint8')
-            print("input:",input.shape)
             input=img_transform(input)
-            # input = input.unsqueeze(0)
-            input = img_transform(input)
+            input = input.unsqueeze(0)
             mask = paddle.zeros_like(input)
         ### Necessary input
 
@@ -190,7 +192,7 @@ if __name__ == "__main__":
             normalize=True,
         )
         image_grid = vutils.save_image(
-            (generated.data.cpu() + 1.0) / 2.0,
+            (generated + 1.0) / 2.0,
             opt.outputs_dir + "/restored_image/" + input_name,
             nrow=1,
             padding=0,
