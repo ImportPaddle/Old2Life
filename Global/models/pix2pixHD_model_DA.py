@@ -7,8 +7,8 @@ import paddle
 # from paddle.autograd import PyLayer
 import os
 # from torch.autograd import PyLayer
-from Global.util.image_pool import ImagePool
-from base_model import BaseModel
+from util.image_pool import ImagePool
+from .base_model import BaseModel
 from . import networks
 
 
@@ -93,14 +93,16 @@ class Pix2PixHDModel(BaseModel):
             params = list(self.netG.parameters())
             if self.gen_features:
                 params += list(self.netE.parameters())
-            self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=(opt.beta1, 0.999))
+            self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1, beta2=0.999)
 
             # optimizer D
             params = list(self.netD.parameters())
-            self.optimizer_D = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1, beta2=0.999)
+            self.optimizer_D = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1,
+                                                     beta2=0.999)
 
             params = list(self.feat_D.parameters())
-            self.optimizer_featD = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1, beta2=0.999)
+            self.optimizer_featD = paddle.optimizer.Adam(parameters=params, learning_rate=opt.lr, beta1=opt.beta1,
+                                                         beta2=0.999)
 
             print("---------- Optimizers initialized -------------")
 
@@ -108,7 +110,7 @@ class Pix2PixHDModel(BaseModel):
                 self.load_optimizer(self.optimizer_D, 'D', opt.which_epoch)
                 self.load_optimizer(self.optimizer_G, "G", opt.which_epoch)
                 self.load_optimizer(self.optimizer_featD, 'featD', opt.which_epoch)
-                for param_groups in self.optimizer_D.param_groups:
+                for param_groups in self.optimizer_D._parameter_list:
                     self.old_lr = param_groups['lr']
 
                 print("---------- Optimizers reloaded -------------")
@@ -258,7 +260,8 @@ class Pix2PixHDModel(BaseModel):
     def inference(self, label, inst, image=None, feat=None):
         # Encode Inputs
         image = paddle.to_tensor(image) if image is not None else None
-        input_label, inst_map, real_image, _ = self.encode_input(paddle.to_tensor(label), paddle.to_tensor(inst), image, infer=True)
+        input_label, inst_map, real_image, _ = self.encode_input(paddle.to_tensor(label), paddle.to_tensor(inst), image,
+                                                                 infer=True)
 
         # Fake Generation
         if self.use_features:
@@ -324,7 +327,7 @@ class Pix2PixHDModel(BaseModel):
 
     def get_edges(self, t):
         # edge = torch.cuda.ByteTensor(t.shape).zero_()
-        edge = paddle.zeros_like(t,dtype=paddle.int8)
+        edge = paddle.zeros_like(t, dtype=paddle.int8)
         edge[:, :, :, 1:] = edge[:, :, :, 1:] | (t[:, :, :, 1:] != t[:, :, :, :-1])
         edge[:, :, :, :-1] = edge[:, :, :, :-1] | (t[:, :, :, 1:] != t[:, :, :, :-1])
         edge[:, :, 1:, :] = edge[:, :, 1:, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
@@ -351,7 +354,8 @@ class Pix2PixHDModel(BaseModel):
         params = list(self.netG.parameters())
         if self.gen_features:
             params += list(self.netE.parameters())
-        self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=self.opt.lr, beta1=self.opt.beta1,beta2= 0.999)
+        self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=self.opt.lr, beta1=self.opt.beta1,
+                                                 beta2=0.999)
         if self.opt.verbose:
             print('------------ Now also finetuning global generator -----------')
 

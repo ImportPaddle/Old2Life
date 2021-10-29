@@ -35,8 +35,7 @@ def create_da_model(opt):
         else:
             model = InferenceModel()
     else:
-    	from .ui_model import UIModel
-    	model = UIModel()
+        raise NotImplementedError #todo Not modle
     model.initialize(opt)
     if opt.verbose:
         print("model [%s] was created" % (model.name()))

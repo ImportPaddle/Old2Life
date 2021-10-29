@@ -72,9 +72,6 @@ def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_
     else:
         raise('generator not implemented!')
     print(netG)
-    if len(gpu_ids) > 0:
-        assert(paddle.device.is_compiled_with_cuda())
-        netG.cuda(gpu_ids[0])
     netG.apply(weights_init)
     return netG
 
@@ -83,9 +80,6 @@ def define_D(input_nc, ndf, n_layers_D, opt, norm='instance', use_sigmoid=False,
     norm_layer = get_norm_layer(norm_type=norm)
     netD = MultiscaleDiscriminator(input_nc, opt, ndf, n_layers_D, norm_layer, use_sigmoid, num_D, getIntermFeat)
     print(netD)
-    if len(gpu_ids) > 0:
-        assert(paddle.device.is_compiled_with_cuda())
-        netD.cuda(gpu_ids[0])
     netD.apply(weights_init)
     return netD
 
@@ -843,7 +837,7 @@ class GANLoss(nn.Layer):
 # from torchvision import models
 import x2paddle.models as models
 class VGG19_torch(paddle.nn.Layer):
-    def __init__(self, requires_grad=False):
+    def __init__(self, stop_gradient=True):
         super(VGG19_torch, self).__init__()
         vgg_pretrained_features = models.vgg19_pth(pretrained=True).features
         self.slice1 = paddle.nn.Sequential()
@@ -861,9 +855,9 @@ class VGG19_torch(paddle.nn.Layer):
             self.slice4.add_module(str(x), vgg_pretrained_features[x])
         for x in range(21, 30):
             self.slice5.add_module(str(x), vgg_pretrained_features[x])
-        if not requires_grad:
+        if stop_gradient:
             for param in self.parameters():
-                param.requires_grad = False
+                param.stop_gradient = True
 
     def forward(self, X):
         h_relu1 = self.slice1(X)
@@ -877,7 +871,7 @@ class VGG19_torch(paddle.nn.Layer):
 class VGGLoss_torch(nn.Layer):
     def __init__(self, gpu_ids):
         super(VGGLoss_torch, self).__init__()
-        self.vgg = VGG19_torch().cuda()
+        self.vgg = VGG19_torch()
         self.criterion = nn.L1Loss()
         self.weights = [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]
 

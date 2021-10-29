@@ -182,7 +182,7 @@ class UnPairOldPhotos_SR(BaseDataset):  ## Synthetic + Real Old
 
             self.load_img_dir_L_old=os.path.join(self.dir_AB,"Real_L_old.bigfile")
             self.load_img_dir_RGB_old=os.path.join(self.dir_AB,"Real_RGB_old.bigfile")
-            self.load_img_dir_clean=os.path.join(self.dir_AB,"VOC_RGB_JPEGImages.bigfile")
+            self.load_img_dir_clean=os.path.join(self.dir_AB,"VOC.bigfile")
 
             # print('+++++++++++++++:',self.load_img_dir_L_old)
 

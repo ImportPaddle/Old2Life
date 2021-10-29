@@ -30,7 +30,7 @@ data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
 dataset_size = len(dataset) * opt.batchSize
 print('#training images = %d' % dataset_size)
-raise NotImplementedError
+
 
 path = os.path.join(opt.checkpoints_dir, opt.name, 'model.txt')
 visualizer = Visualizer(opt)
@@ -45,12 +45,16 @@ if opt.continue_train:
 else:
     start_epoch, epoch_iter = 1, 0
 
+
 # opt.which_epoch=start_epoch-1
 model = create_da_model(opt)
+print('path:',path)
 fd = open(path, 'w')
 fd.write(str(model.module.netG))
 fd.write(str(model.module.netD))
 fd.close()
+
+
 
 total_steps = (start_epoch - 1) * dataset_size + epoch_iter
 
@@ -58,10 +62,13 @@ display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 
+
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
+
     epoch_start_time = time.time()
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
+    print('data length:',len(dataset))
     for i, data in enumerate(dataset, start=epoch_iter):
         iter_start_time = time.time()
         total_steps += opt.batchSize
@@ -148,4 +155,4 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     ### linearly decay learning rate after certain iterations
     if epoch > opt.niter:
         model.module.update_learning_rate()
-
+    raise NotImplementedError
