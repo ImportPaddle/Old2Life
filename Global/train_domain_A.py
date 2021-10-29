@@ -30,6 +30,7 @@ data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
 dataset_size = len(dataset) * opt.batchSize
 print('#training images = %d' % dataset_size)
+raise NotImplementedError
 
 path = os.path.join(opt.checkpoints_dir, opt.name, 'model.txt')
 visualizer = Visualizer(opt)

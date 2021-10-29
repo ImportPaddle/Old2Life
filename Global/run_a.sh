@@ -1,4 +1,4 @@
-python train_domain_A.py --use_v2_degradation --continue_train --training_dataset domain_A \
+python Global/train_domain_A.py --use_v2_degradation --continue_train --training_dataset domain_A \
 --name domainA_SR_old_photos --label_nc 0 --loadSize 256 --fineSize 256 \
 --dataroot [your_data_folder] \
 --no_instance --resize_or_crop crop_only --batchSize 100 --no_html -\

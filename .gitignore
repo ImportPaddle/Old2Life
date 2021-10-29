@@ -22,4 +22,10 @@ __pycache__
 
 Synchronized-BatchNorm-PyTorch/
 
+VOC/
 
+Real_L_old/
+
+Real_RGB_old/
+
+temp_old/

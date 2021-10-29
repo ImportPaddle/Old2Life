@@ -1,4 +1,4 @@
-python train_domain_B.py --continue_train \
+python Global/train_domain_B.py --continue_train \
 --training_dataset domain_B \
 --name domainB_old_photos \
 --label_nc 0 \
