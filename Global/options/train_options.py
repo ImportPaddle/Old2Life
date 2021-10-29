@@ -42,7 +42,7 @@ class TrainOptions(BaseOptions):
 
         self.parser.add_argument('--no_TTUR',action='store_true',help='No TTUR')
 
-        self.parser.add_argument('--start_epoch',type=int,default=-1,help='write the start_epoch of iter.txt into this parameter')
+        self.parser.add_argument('--start_epoch',type=int,default=-0,help='write the start_epoch of iter.txt into this parameter')
         self.parser.add_argument('--no_degradation',action='store_true',help='when train the mapping, enable this parameter --> no degradation will be added into clean image')
         self.parser.add_argument('--no_load_VAE',action='store_true',help='when train the mapping, enable this parameter --> random initialize the encoder an decoder')
         self.parser.add_argument('--use_v2_degradation',action='store_true',help='enable this parameter --> 4 kinds of degradations will be used to synthesize corruption')

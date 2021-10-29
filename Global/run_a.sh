@@ -7,7 +7,7 @@ python Global/train_domain_A.py \
 --fineSize 256 \
 --no_instance \
 --resize_or_crop crop_only \
---batchSize 16 --no_html \
+--batchSize 32 --no_html \
 --gpu_ids -1 \
 --self_gen \
 --nThreads 0 \

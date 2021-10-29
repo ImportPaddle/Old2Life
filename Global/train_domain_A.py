@@ -39,10 +39,10 @@ if opt.continue_train:
     try:
         start_epoch, epoch_iter = np.loadtxt(iter_path, delimiter=',', dtype=int)
     except:
-        start_epoch, epoch_iter = 1, 0
+        start_epoch, epoch_iter = 0, 0
     visualizer.print_save('Resuming from epoch %d at iteration %d' % (start_epoch - 1, epoch_iter))
 else:
-    start_epoch, epoch_iter = 1, 0
+    start_epoch, epoch_iter = 0, 0
 
 # opt.which_epoch=start_epoch-1
 model = create_da_model(opt)
@@ -58,7 +58,7 @@ display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 
-for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
+for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
 
     epoch_start_time = time.time()
     if epoch != start_epoch:

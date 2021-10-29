@@ -19,7 +19,6 @@ import torchvision_paddle.utils as vutils
 from paddle.autograd import PyLayer
 import random
 
-
 opt = TrainOptions().parse()
 
 if opt.debug:
@@ -37,14 +36,13 @@ print('#training images = %d' % dataset_size)
 path = os.path.join(opt.checkpoints_dir, opt.name, 'model.txt')
 visualizer = Visualizer(opt)
 
-
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
     try:
-        start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
+        start_epoch, epoch_iter = np.loadtxt(iter_path, delimiter=',', dtype=int)
     except:
         start_epoch, epoch_iter = 1, 0
-    visualizer.print_save('Resuming from epoch %d at iteration %d' % (start_epoch-1, epoch_iter))
+    visualizer.print_save('Resuming from epoch %d at iteration %d' % (start_epoch - 1, epoch_iter))
 else:
     start_epoch, epoch_iter = 1, 0
 
@@ -55,7 +53,7 @@ fd.write(str(model.module.netG))
 fd.write(str(model.module.netD))
 fd.close()
 
-total_steps = (start_epoch-1) * dataset_size + epoch_iter
+total_steps = (start_epoch - 1) * dataset_size + epoch_iter
 
 display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
@@ -66,6 +64,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
     for i, data in enumerate(dataset, start=epoch_iter):
+
         iter_start_time = time.time()
         total_steps += opt.batchSize
         epoch_iter += opt.batchSize
@@ -74,31 +73,34 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         save_fake = total_steps % opt.display_freq == display_delta
 
         ############## Forward Pass ######################
-        losses, generated = model(PyLayer(data['label']), PyLayer(data['inst']), 
-            PyLayer(data['image']), PyLayer(data['feat']), infer=save_fake)
+        losses, generated = model(paddle.to_tensor(data['label'], stop_gradient=False),
+                                  paddle.to_tensor(data['inst'], stop_gradient=False),
+                                  paddle.to_tensor(data['image'], stop_gradient=False),
+                                  paddle.to_tensor(data['feat'], stop_gradient=False), infer=save_fake)
 
         # sum per device losses
-        losses = [ paddle.mean(x) if not isinstance(x, int) else x for x in losses ]
+        losses = [paddle.mean(x) if not isinstance(x, int) else x for x in losses]
         loss_dict = dict(zip(model.module.loss_names, losses))
-
 
         # calculate final loss scalar
         loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
-        loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat',0) + loss_dict.get('G_VGG',0) + loss_dict['G_KL'] + loss_dict.get('Smooth_L1',0)*opt.L1_weight
-
+        loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat', 0) + loss_dict.get('G_VGG', 0) + loss_dict[
+            'G_KL'] + loss_dict.get('Smooth_L1', 0) * opt.L1_weight
 
         ############### Backward Pass ####################
         # update generator weights
-        model.module.optimizer_G.zero_grad()
+        model.module.optimizer_G.clear_grad()
         loss_G.backward()
         model.module.optimizer_G.step()
 
         # update discriminator weights
-        model.module.optimizer_D.zero_grad()
+        model.module.optimizer_D.clear_grad()
         loss_D.backward()
         model.module.optimizer_D.step()
 
-        #call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"]) 
+        print(f'epoch:{epoch}=====batch_id:{i}=====loss_G:{loss_G.mean().numpy()}=====loss_D:{loss_D.mean().numpy()}')
+
+        # call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
 
         ############## Display results and errors ##########
         ### print out errors
@@ -114,19 +116,21 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             if not os.path.exists(opt.outputs_dir + opt.name):
                 os.makedirs(opt.outputs_dir + opt.name)
             imgs_num = 5
-            imgs = paddle.concat((data['label'][:imgs_num], generated.data.cpu()[:imgs_num], data['image'][:imgs_num]), 0)
+            imgs = paddle.concat((data['label'][:imgs_num], generated.data.cpu()[:imgs_num], data['image'][:imgs_num]),
+                                 0)
 
             imgs = (imgs + 1.) / 2.0
 
             try:
-                image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(total_steps) + '.png',
-                        nrow=imgs_num, padding=0, normalize=True)
+                image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
+                    total_steps) + '.png',
+                                               nrow=imgs_num, padding=0, normalize=True)
             except OSError as err:
                 print(err)
 
         if epoch_iter >= dataset_size:
             break
-       
+
     # end of epoch 
     iter_end_time = time.time()
     print('End of epoch %d / %d \t Time Taken: %d sec' %
@@ -134,10 +138,10 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
     ### save model for this epoch
     if epoch % opt.save_epoch_freq == 0:
-        print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))        
+        print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
         model.module.save('latest')
         model.module.save(epoch)
-        np.savetxt(iter_path, (epoch+1, 0), delimiter=',', fmt='%d')
+        np.savetxt(iter_path, (epoch + 1, 0), delimiter=',', fmt='%d')
 
     ### instead of only training the local enhancer, train the entire network after certain iterations
     if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
@@ -146,4 +150,3 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     ### linearly decay learning rate after certain iterations
     if epoch > opt.niter:
         model.module.update_learning_rate()
-

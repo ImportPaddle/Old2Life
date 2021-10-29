@@ -7,8 +7,8 @@ import paddle
 import os
 from paddle.autograd import PyLayer
 # from torch.autograd import Variable
-from Global.util.image_pool import ImagePool
-from base_model import BaseModel
+from util.image_pool import ImagePool
+from .base_model import BaseModel
 from . import networks
 
 class Pix2PixHDModel(BaseModel):
@@ -75,7 +75,7 @@ class Pix2PixHDModel(BaseModel):
             # define loss functions
             self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss, opt.Smooth_L1)
             
-            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)   
+            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan)
             self.criterionFeat = paddle.nn.L1Loss()
 
             # self.criterionImage = torch.nn.SmoothL1Loss()
@@ -111,20 +111,19 @@ class Pix2PixHDModel(BaseModel):
 
     def encode_input(self, label_map, inst_map=None, real_image=None, feat_map=None, infer=False):             
         if self.opt.label_nc == 0:
-            input_label = label_map.data.cuda()
+            input_label = label_map
         else:
             # create one-hot vector for label map 
             size = label_map.shape
             oneHot_size = (size[0], self.opt.label_nc, size[2], size[3])
             # input_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
             input_label=paddle.zeros(oneHot_size,dtype=paddle.float32)
-            input_label = input_label.scatter_(1, label_map.data.long().cuda(), 1.0)
+            input_label = input_label.scatter_(1, label_map.astype(paddle.int64), 1.0)
             if self.opt.data_type == 16:
-                input_label = input_label.half()
+                input_label = input_label.astype(paddle.int16)
 
         # get edges from instance map
         if not self.opt.no_instance:
-            inst_map = inst_map.data.cuda()
             edge_map = self.get_edges(inst_map)
             input_label = paddle.concat((input_label, edge_map), axis=1)
         input_label = paddle.to_tensor(input_label,stop_gradient=False)
@@ -139,7 +138,7 @@ class Pix2PixHDModel(BaseModel):
             if self.opt.load_features:
                 feat_map = paddle.to_tensor(feat_map,stop_gradient=False)
             if self.opt.label_feat:
-                inst_map = label_map.cuda()
+                inst_map = label_map
 
         return input_label, inst_map, real_image, feat_map
 
@@ -249,7 +248,7 @@ class Pix2PixHDModel(BaseModel):
         features_clustered = np.load(cluster_path, encoding='latin1').item()
 
         # randomly sample from the feature clusters
-        inst_np = inst.cpu().numpy().astype(int)                                      
+        inst_np = inst.numpy().astype(int)
         feat_map = self.Tensor(inst.shape[0], self.opt.feat_num, inst.shape[2], inst.shape[3])
         for i in np.unique(inst_np):    
             label = i if i < 1000 else i//1000
@@ -261,7 +260,7 @@ class Pix2PixHDModel(BaseModel):
                 for k in range(self.opt.feat_num):                                    
                     feat_map[idx[:,0], idx[:,1] + k, idx[:,2], idx[:,3]] = feat[cluster_idx, k]
         if self.opt.data_type==16:
-            feat_map = feat_map.half()
+            feat_map = feat_map.astype(paddle.int16)
         return feat_map
 
     def encode_features(self, image, inst):
@@ -269,7 +268,7 @@ class Pix2PixHDModel(BaseModel):
         feat_num = self.opt.feat_num
         h, w = inst.shape[2], inst.shape[3]
         block_num = 32
-        feat_map = self.netE.forward(image, inst.cuda())
+        feat_map = self.netE.forward(image, inst)
         inst_np = inst.cpu().numpy().astype(int)
         feature = {}
         for i in range(self.opt.label_nc):
@@ -281,7 +280,7 @@ class Pix2PixHDModel(BaseModel):
             idx = idx[num//2,:]
             val = np.zeros((1, feat_num+1))                        
             for k in range(feat_num):
-                val[0, k] = feat_map[idx[0], idx[1] + k, idx[2], idx[3]].data[0]            
+                val[0, k] = feat_map[idx[0], idx[1] + k, idx[2], idx[3]][0]
             val[0, feat_num] = float(num) / (h * w // block_num)
             feature[label] = np.append(feature[label], val, axis=0)
         return feature
