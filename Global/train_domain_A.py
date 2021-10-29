@@ -27,10 +27,9 @@ if opt.debug:
     opt.max_dataset_size = 10
 
 data_loader = CreateDataLoader(opt)
-dataset = data_loader.load_data()
-dataset_size = len(dataset) * opt.batchSize
+dataloader = data_loader.load_data()
+dataset_size = len(dataloader) * opt.batchSize
 print('#training images = %d' % dataset_size)
-
 
 path = os.path.join(opt.checkpoints_dir, opt.name, 'model.txt')
 visualizer = Visualizer(opt)
@@ -45,16 +44,13 @@ if opt.continue_train:
 else:
     start_epoch, epoch_iter = 1, 0
 
-
 # opt.which_epoch=start_epoch-1
 model = create_da_model(opt)
-print('path:',path)
+print('path:', path)
 fd = open(path, 'w')
 fd.write(str(model.module.netG))
 fd.write(str(model.module.netD))
 fd.close()
-
-
 
 total_steps = (start_epoch - 1) * dataset_size + epoch_iter
 
@@ -62,24 +58,27 @@ display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 
-
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
     epoch_start_time = time.time()
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
-    print('data length:',len(dataset))
-    for i, data in enumerate(dataset, start=epoch_iter):
+    print('data length:', len(dataloader))
+    for i, data in enumerate(dataloader(), start=epoch_iter):
+
         iter_start_time = time.time()
         total_steps += opt.batchSize
         epoch_iter += opt.batchSize
+        print('i=====:',i)
 
         # whether to collect output images
         save_fake = total_steps % opt.display_freq == display_delta
 
         ############## Forward Pass ######################
-        losses, generated = model(PyLayer(data['label']), PyLayer(data['inst']),
-                                  PyLayer(data['image']), PyLayer(data['feat']), infer=save_fake)
+        losses, generated = model(paddle.to_tensor(data['label'], stop_gradient=False),
+                                  paddle.to_tensor(data['inst'], stop_gradient=False),
+                                  paddle.to_tensor(data['image'], stop_gradient=False),
+                                  paddle.to_tensor(data['feat'], stop_gradient=False), infer=save_fake)
 
         # sum per device losses
         losses = [paddle.mean(x) if not isinstance(x, int) else x for x in losses]
@@ -87,8 +86,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
         # calculate final loss scalar
         loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
-        loss_featD=(loss_dict['featD_fake'] + loss_dict['featD_real']) * 0.5
-        loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat', 0) + loss_dict.get('G_VGG', 0) + loss_dict['G_KL'] + loss_dict['G_featD']
+        loss_featD = (loss_dict['featD_fake'] + loss_dict['featD_real']) * 0.5
+        loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat', 0) + loss_dict.get('G_VGG', 0) + loss_dict['G_KL'] + \
+                 loss_dict['G_featD']
 
         ############### Backward Pass ####################
         # update generator weights
@@ -121,17 +121,12 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             if not os.path.exists(opt.outputs_dir + opt.name):
                 os.makedirs(opt.outputs_dir + opt.name)
             imgs_num = data['label'].shape[0]
-            imgs = paddle.concat((data['label'], generated.data.cpu(), data['image']), 0)
+            imgs = paddle.concat((data['label'], generated, data['image']), 0)
 
             imgs = (imgs + 1.) / 2.0
 
-            try:
-                image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
-                    total_steps) + '.png',
-                                               nrow=imgs_num, padding=0, normalize=True)
-            except OSError as err:
-                print(err)
-
+            image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
+                total_steps) + '.png', nrow=imgs_num, padding=0, normalize=True)
 
         if epoch_iter >= dataset_size:
             break
@@ -155,4 +150,3 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     ### linearly decay learning rate after certain iterations
     if epoch > opt.niter:
         model.module.update_learning_rate()
-    raise NotImplementedError

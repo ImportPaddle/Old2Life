@@ -27,6 +27,9 @@ class CustomDatasetDataLoader(BaseDataLoader):
     def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
         self.dataset = CreateDataset(opt)
+        # print(self.dataset.__len__())
+        # print(self.dataset.__getitem__(5))
+        # raise NotImplementedError
         self.dataloader = paddle.io.DataLoader(
             self.dataset,
             batch_size=opt.batchSize,

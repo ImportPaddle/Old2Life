@@ -53,7 +53,7 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
         transform_list.append(transforms.Resize(osize, method))
     elif 'scale_width' in opt.resize_or_crop:
     #    transform_list.append(Lambda(lambda img: __scale_width(img, opt.loadSize, method)))  ## Here , We want the shorter side to match 256, and Resize will finish it.
-        transform_list.append(transforms.Resize(256,method))
+        transform_list.append(transforms.Resize(256))
 
     if 'crop' in opt.resize_or_crop:
         if opt.isTrain:
@@ -67,7 +67,6 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
     ## when testing, for ablation study, choose center_crop directly.
 
 
-
     if opt.resize_or_crop == 'none':
         base = float(2 ** opt.n_downsample_global)
         if opt.netG == 'local':
@@ -77,15 +76,17 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
     if opt.isTrain and not opt.no_flip:
         transform_list.append(Lambda(lambda img: __flip(img, params['flip'])))
 
-    transform_list += [transforms.ToTensor()]
+
 
     if normalize:
-        transform_list += [transforms.Normalize((0.5, 0.5, 0.5),
-                                                (0.5, 0.5, 0.5))]
+        transform_list += [transforms.Normalize(mean=(127.5,127.5,127.5),std=(127.5,127.5,127.5),data_format='HWC')]
+
+    transform_list += [transforms.ToTensor()]
+
     return transforms.Compose(transform_list)
 
 def normalize():    
-    return transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    return transforms.Normalize(mean=(127.5,127.5,127.5),std=(127.5,127.5,127.5),data_format='HWC')
 
 def __make_power_2(img, base, method=Image.BICUBIC):
     ow, oh = img.size        

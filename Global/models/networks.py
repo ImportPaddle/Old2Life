@@ -61,7 +61,7 @@ def print_network(net):
 
 def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_blocks_global=9, n_local_enhancers=1,
              n_blocks_local=3, norm='instance', gpu_ids=[], opt=None):
-    
+
     norm_layer = get_norm_layer(norm_type=norm)
     if netG == 'global':
         # if opt.self_gen:
@@ -71,7 +71,7 @@ def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_
         #     netG = GlobalGenerator_v2(input_nc, output_nc, ngf, k_size, n_downsample_global, n_blocks_global, norm_layer, opt=opt)
     else:
         raise('generator not implemented!')
-    print(netG)
+    # print(netG)
     netG.apply(weights_init)
     return netG
 
@@ -79,7 +79,7 @@ def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_
 def define_D(input_nc, ndf, n_layers_D, opt, norm='instance', use_sigmoid=False, num_D=1, getIntermFeat=False, gpu_ids=[]):
     norm_layer = get_norm_layer(norm_type=norm)
     netD = MultiscaleDiscriminator(input_nc, opt, ndf, n_layers_D, norm_layer, use_sigmoid, num_D, getIntermFeat)
-    print(netD)
+    # print(netD)
     netD.apply(weights_init)
     return netD
 
