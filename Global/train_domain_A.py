@@ -46,7 +46,6 @@ else:
 
 # opt.which_epoch=start_epoch-1
 model = create_da_model(opt)
-print('path:', path)
 fd = open(path, 'w')
 fd.write(str(model.module.netG))
 fd.write(str(model.module.netD))
@@ -63,13 +62,11 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
     epoch_start_time = time.time()
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
-    print('data length:', len(dataloader))
     for i, data in enumerate(dataloader(), start=epoch_iter):
 
         iter_start_time = time.time()
         total_steps += opt.batchSize
         epoch_iter += opt.batchSize
-        print('i=====:',i)
 
         # whether to collect output images
         save_fake = total_steps % opt.display_freq == display_delta
@@ -106,7 +103,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
         model.module.optimizer_featD.step()
 
         # call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
-
+        print(f'epoch:{epoch}=====batch_id:{i}=====loss_G:{loss_G.mean().numpy()}=====loss_D:{loss_D.mean().numpy()}')
         ############## Display results and errors ##########
         ### print out errors
         if total_steps % opt.print_freq == print_delta:
