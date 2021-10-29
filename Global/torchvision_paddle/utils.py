@@ -66,14 +66,13 @@ def make_grid(
         tensor = paddle.concat((tensor, tensor, tensor), 1)
 
     if normalize is True:
-        tensor = tensor.clone()  # avoid modifying tensor in-place
         if value_range is not None:
             assert isinstance(value_range, tuple), \
                 "value_range has to be a tuple (min, max) if specified. min and max are numbers"
 
         def norm_ip(img, low, high):
             img.clamp_(min=low, max=high)
-            img.sub_(low).div_(max(high - low, 1e-5))
+            img = img / max(high - low, 1e-5)
 
         def norm_range(t, value_range):
             if value_range is not None:
@@ -94,19 +93,18 @@ def make_grid(
     nmaps = tensor.size(0)
     xmaps = min(nrow, nmaps)
     ymaps = int(math.ceil(float(nmaps) / xmaps))
-    height, width = int(tensor.size(2) + padding), int(tensor.size(3) + padding)
-    num_channels = tensor.size(1)
-    grid = tensor.new_full((num_channels, height * ymaps + padding, width * xmaps + padding), pad_value)
+    height, width = int(tensor.shape[2] + padding), int(tensor.shape[3] +
+                                                        padding)
+    num_channels = tensor.shape[1]
+    grid = paddle.full((num_channels, height * ymaps + padding,
+                        width * xmaps + padding), pad_value)
     k = 0
     for y in range(ymaps):
         for x in range(xmaps):
             if k >= nmaps:
                 break
-            # Tensor.copy_() is a valid method but seems to be missing from the stubs
-            # https://pypaddle.org/docs/stable/tensors.html#paddle.Tensor.copy_
-            grid.narrow(1, y * height + padding, height - padding).narrow(
-                2, x * width + padding, width - padding
-            ).copy_(tensor[k])
+            grid[:, y * height + padding:(y + 1) * height, x * width + padding:(
+                                                                                       x + 1) * width] = tensor[k]
             k = k + 1
     return grid
 
