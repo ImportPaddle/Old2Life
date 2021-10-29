@@ -7,6 +7,8 @@ import os
 import paddle
 
 from util import util
+
+
 # import torch
 
 
@@ -332,9 +334,9 @@ class BaseOptions:
             help="For partial non-local, choose how to downsample the mask",
         )
 
-        self.parser.add_argument("--mapping_exp",type=int,default=0,help='Default 0: original PNL|1: Multi-Scale Patch Attention')
-        self.parser.add_argument("--inference_optimize",action='store_true',help='optimize the memory cost')
-
+        self.parser.add_argument("--mapping_exp", type=int, default=0,
+                                 help='Default 0: original PNL|1: Multi-Scale Patch Attention')
+        self.parser.add_argument("--inference_optimize", action='store_true', help='optimize the memory cost')
 
         self.initialized = True
 
