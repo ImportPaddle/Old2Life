@@ -7,12 +7,13 @@ python Global/train_domain_B.py \
 --fineSize 256 \
 --no_instance \
 --resize_or_crop crop_only \
---batchSize 32 --no_html \
---gpu_ids -1 \
+--batchSize 64 --no_html \
+--gpu_ids 0 \
 --self_gen \
---nThreads 0 \
+--nThreads 4 \
 --n_downsample_global 3 \
 --k_size 4 --use_v2 --mc 64 --start_r 1 --kl 1 --no_cgan \
 --dataroot D:\\Desktop\\plan\\Old2Life\\Global\\test_old \
 --outputs_dir D:\\Desktop\\plan\\Old2Life\\Global\\test_outputs \
---checkpoints_dir D:\\Desktop\\plan\\Old2Life\\Global\\test_checkpoints
+--checkpoints_dir D:\\Desktop\\plan\\Old2Life\\Global\\test_checkpoints \
+--debug
