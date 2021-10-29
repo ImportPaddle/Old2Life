@@ -11,16 +11,18 @@ import numpy as np
 import paddle.nn.functional as F
 import models.initializer as initializer
 
+
 ###############################################################################
 # Functions
 ###############################################################################
 
 def weights_init(m):
     if isinstance(m, nn.Conv2D):
-        initializer.normal_(m.weight,mean=0.0,std=0.02)
+        initializer.normal_(m.weight, mean=0.0, std=0.02)
     elif isinstance(m, nn.BatchNorm2D):
-        initializer.normal_(m.weight,1.0,0.02)
+        initializer.normal_(m.weight, 1.0, 0.02)
         initializer.fill_(m.bias, 0)
+
 
 # def weights_init(m):
 #     classname = m.__class__.__name__
@@ -61,7 +63,6 @@ def print_network(net):
 
 def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_blocks_global=9, n_local_enhancers=1,
              n_blocks_local=3, norm='instance', gpu_ids=[], opt=None):
-
     norm_layer = get_norm_layer(norm_type=norm)
     if netG == 'global':
         # if opt.self_gen:
@@ -70,13 +71,14 @@ def define_G(input_nc, output_nc, ngf, netG, k_size=3, n_downsample_global=3, n_
         # else:
         #     netG = GlobalGenerator_v2(input_nc, output_nc, ngf, k_size, n_downsample_global, n_blocks_global, norm_layer, opt=opt)
     else:
-        raise('generator not implemented!')
+        raise ('generator not implemented!')
     # print(netG)
     netG.apply(weights_init)
     return netG
 
 
-def define_D(input_nc, ndf, n_layers_D, opt, norm='instance', use_sigmoid=False, num_D=1, getIntermFeat=False, gpu_ids=[]):
+def define_D(input_nc, ndf, n_layers_D, opt, norm='instance', use_sigmoid=False, num_D=1, getIntermFeat=False,
+             gpu_ids=[]):
     norm_layer = get_norm_layer(norm_type=norm)
     netD = MultiscaleDiscriminator(input_nc, opt, ndf, n_layers_D, norm_layer, use_sigmoid, num_D, getIntermFeat)
     # print(netD)
@@ -84,18 +86,17 @@ def define_D(input_nc, ndf, n_layers_D, opt, norm='instance', use_sigmoid=False,
     return netD
 
 
-
 class GlobalGenerator_DCDCv2(nn.Layer):
     def __init__(
-        self,
-        input_nc,
-        output_nc,
-        ngf=64,
-        k_size=3,
-        n_downsampling=8,
-        norm_layer=nn.BatchNorm2D,
-        padding_type="reflect",
-        opt=None,
+            self,
+            input_nc,
+            output_nc,
+            ngf=64,
+            k_size=3,
+            n_downsampling=8,
+            norm_layer=nn.BatchNorm2D,
+            padding_type="reflect",
+            opt=None,
     ):
         super(GlobalGenerator_DCDCv2, self).__init__()
         activation = nn.ReLU(True)
@@ -282,7 +283,7 @@ class GlobalGenerator_DCDCv2(nn.Layer):
             model += [
                 nn.Pad2D(3, mode='reflect'),
                 nn.Conv2D(min(ngf, opt.mc), output_nc, kernel_size=7, padding=0),
-                nn.Tanh(),#todo
+                nn.Tanh(),  # todo
             ]
         self.decoder = nn.Sequential(*model)
 
@@ -300,7 +301,7 @@ class GlobalGenerator_DCDCv2(nn.Layer):
 # Define a resnet block
 class ResnetBlock(nn.Layer):
     def __init__(
-        self, dim, padding_type, norm_layer, opt, activation=nn.ReLU(True), use_dropout=False, dilation=1
+            self, dim, padding_type, norm_layer, opt, activation=nn.ReLU(True), use_dropout=False, dilation=1
     ):
         super(ResnetBlock, self).__init__()
         self.opt = opt
@@ -387,7 +388,7 @@ class Encoder(nn.Layer):
         inst_list = np.unique(inst.cpu().numpy().astype(int))
         for i in inst_list:
             for b in range(input.shape[0]):
-                indices = (inst[b : b + 1] == int(i)).nonzero()  # n x 4
+                indices = (inst[b: b + 1] == int(i)).nonzero()  # n x 4
                 for j in range(self.output_nc):
                     output_ins = outputs[indices[:, 0] + b, indices[:, 1] + j, indices[:, 2], indices[:, 3]]
                     mean_feat = paddle.mean(output_ins).expand_as(output_ins)
@@ -406,14 +407,14 @@ def SN(module, mode=True):
 
 class NonLocalBlock2D_with_mask_Res(nn.Layer):
     def __init__(
-        self,
-        in_channels,
-        inter_channels,
-        mode="add",
-        re_norm=False,
-        temperature=1.0,
-        use_self=False,
-        cosin=False,
+            self,
+            in_channels,
+            inter_channels,
+            mode="add",
+            re_norm=False,
+            temperature=1.0,
+            use_self=False,
+            cosin=False,
     ):
         super(NonLocalBlock2D_with_mask_Res, self).__init__()
 
@@ -433,7 +434,7 @@ class NonLocalBlock2D_with_mask_Res(nn.Layer):
         # nn.init.constant(self.W.weight, 0)
         # nn.init.constant(self.W.bias, 0)
         # for pytorch 0.4.0
-        initializer.constant_(self.W.weight, 0)#todo
+        initializer.constant_(self.W.weight, 0)  # todo
 
         initializer.constant_(self.W.bias, 0)
         self.theta = nn.Conv2D(
@@ -541,10 +542,10 @@ class MultiscaleDiscriminator(nn.Layer):
         for i in range(num_D):
             netD = NLayerDiscriminator(input_nc, opt, ndf, n_layers, norm_layer, use_sigmoid, getIntermFeat)
             if getIntermFeat:
-                for j in range(n_layers+2):
-                    setattr(self, 'scale'+str(i)+'_layer'+str(j), getattr(netD, 'model'+str(j)))
+                for j in range(n_layers + 2):
+                    setattr(self, 'scale' + str(i) + '_layer' + str(j), getattr(netD, 'model' + str(j)))
             else:
-                setattr(self, 'layer'+str(i), netD.model)
+                setattr(self, 'layer' + str(i), netD.model)
 
         self.downsample = nn.AvgPool2D(3, stride=2, padding=[1, 1], exclusive=True)
 
@@ -563,50 +564,54 @@ class MultiscaleDiscriminator(nn.Layer):
         input_downsampled = input
         for i in range(num_D):
             if self.getIntermFeat:
-                model = [getattr(self, 'scale'+str(num_D-1-i)+'_layer'+str(j)) for j in range(self.n_layers+2)]
+                model = [getattr(self, 'scale' + str(num_D - 1 - i) + '_layer' + str(j)) for j in
+                         range(self.n_layers + 2)]
             else:
-                model = getattr(self, 'layer'+str(num_D-1-i))
+                model = getattr(self, 'layer' + str(num_D - 1 - i))
             result.append(self.singleD_forward(model, input_downsampled))
-            if i != (num_D-1):
+            if i != (num_D - 1):
                 input_downsampled = self.downsample(input_downsampled)
         return result
 
+
 # Defines the PatchGAN discriminator with the specified arguments.
 class NLayerDiscriminator(nn.Layer):
-    def __init__(self, input_nc, opt, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2D, use_sigmoid=False, getIntermFeat=False):
+    def __init__(self, input_nc, opt, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2D, use_sigmoid=False,
+                 getIntermFeat=False):
         super(NLayerDiscriminator, self).__init__()
         self.getIntermFeat = getIntermFeat
         self.n_layers = n_layers
 
         kw = 4
-        padw = int(np.ceil((kw-1.0)/2))
-        sequence = [[SN(nn.Conv2D(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),opt.use_SN), nn.LeakyReLU(0.2, True)]]
+        padw = int(np.ceil((kw - 1.0) / 2))
+        sequence = [
+            [SN(nn.Conv2D(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), opt.use_SN), nn.LeakyReLU(0.2, True)]]
 
         nf = ndf
         for n in range(1, n_layers):
             nf_prev = nf
             nf = min(nf * 2, 512)
             sequence += [[
-                SN(nn.Conv2D(nf_prev, nf, kernel_size=kw, stride=2, padding=padw),opt.use_SN),
+                SN(nn.Conv2D(nf_prev, nf, kernel_size=kw, stride=2, padding=padw), opt.use_SN),
                 norm_layer(nf), nn.LeakyReLU(0.2, True)
             ]]
 
         nf_prev = nf
         nf = min(nf * 2, 512)
         sequence += [[
-            SN(nn.Conv2D(nf_prev, nf, kernel_size=kw, stride=1, padding=padw),opt.use_SN),
+            SN(nn.Conv2D(nf_prev, nf, kernel_size=kw, stride=1, padding=padw), opt.use_SN),
             norm_layer(nf),
             nn.LeakyReLU(0.2, True)
         ]]
 
-        sequence += [[SN(nn.Conv2D(nf, 1, kernel_size=kw, stride=1, padding=padw),opt.use_SN)]]
+        sequence += [[SN(nn.Conv2D(nf, 1, kernel_size=kw, stride=1, padding=padw), opt.use_SN)]]
 
         if use_sigmoid:
             sequence += [[nn.Sigmoid()]]
 
         if getIntermFeat:
             for n in range(len(sequence)):
-                setattr(self, 'model'+str(n), nn.Sequential(*sequence[n]))
+                setattr(self, 'model' + str(n), nn.Sequential(*sequence[n]))
         else:
             sequence_stream = []
             for n in range(len(sequence)):
@@ -616,21 +621,19 @@ class NLayerDiscriminator(nn.Layer):
     def forward(self, input):
         if self.getIntermFeat:
             res = [input]
-            for n in range(self.n_layers+2):
-                model = getattr(self, 'model'+str(n))
+            for n in range(self.n_layers + 2):
+                model = getattr(self, 'model' + str(n))
                 res.append(model(res[-1]))
             return res[1:]
         else:
             return self.model(input)
 
 
-
 class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv and mask
     def __init__(self, in_channels, inter_channels, patch_size):
         super(Patch_Attention_4, self).__init__()
 
-        self.patch_size=patch_size
-
+        self.patch_size = patch_size
 
         # self.g = nn.Conv2D(
         #     in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
@@ -653,7 +656,8 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
         #     in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1, stride=1, padding=0
         # )
 
-        self.F_Combine=nn.Conv2D(in_channels=1025,out_channels=512,kernel_size=3,stride=1,padding=1,bias_attr=True)
+        self.F_Combine = nn.Conv2D(in_channels=1025, out_channels=512, kernel_size=3, stride=1, padding=1,
+                                   bias_attr=True)
         norm_layer = get_norm_layer(norm_type="instance")
         activation = nn.ReLU(True)
 
@@ -675,7 +679,7 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
         # input: [B,C,HW]
         # dim: scalar > 0
         # index: [B, HW]
-        views = [input.shape[0]] + [1 if i!=dim else -1 for i in range(1, len(input.shape))]
+        views = [input.shape[0]] + [1 if i != dim else -1 for i in range(1, len(input.shape))]
         expanse = list(input.shape)
         expanse[0] = -1
         expanse[dim] = -1
@@ -684,9 +688,9 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
 
     def forward(self, z, mask):  ## The shape of mask is Batch*1*H*W
 
-        x=self.res_block(z)
+        x = self.res_block(z)
 
-        b,c,h,w=x.shape
+        b, c, h, w = x.shape
 
         ## mask resize + dilation
         # tmp = 1 - mask
@@ -699,37 +703,38 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
         # mask=1-mask
         ## 1: mask position 0: non-mask
 
-        mask_unfold=F.unfold(mask, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
-        non_mask_region=(paddle.mean(mask_unfold,axis=1,keepdim=True)>0.6).float()
-        all_patch_num=h*w/self.patch_size/self.patch_size
-        non_mask_region=non_mask_region.repeat(1,int(all_patch_num),1)
+        mask_unfold = F.unfold(mask, kernel_sizes=[self.patch_size, self.patch_size], paddings=0,
+                               strides=self.patch_size)
+        non_mask_region = (paddle.mean(mask_unfold, axis=1, keepdim=True) > 0.6).float()
+        all_patch_num = h * w / self.patch_size / self.patch_size
+        non_mask_region = non_mask_region.repeat(1, int(all_patch_num), 1)
 
-        x_unfold=F.unfold(x, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
-        y_unfold=x_unfold.permute(0,2,1)
-        x_unfold_normalized=F.normalize(x_unfold,axis=1)
-        y_unfold_normalized=F.normalize(y_unfold,axis=2)
-        correlation_matrix=paddle.bmm(y_unfold_normalized,x_unfold_normalized)
-        correlation_matrix=correlation_matrix.masked_fill(non_mask_region==1.,-1e9)
-        correlation_matrix=F.softmax(correlation_matrix,axis=2)
+        x_unfold = F.unfold(x, kernel_sizes=[self.patch_size, self.patch_size], paddings=0, strides=self.patch_size)
+        y_unfold = x_unfold.permute(0, 2, 1)
+        x_unfold_normalized = F.normalize(x_unfold, axis=1)
+        y_unfold_normalized = F.normalize(y_unfold, axis=2)
+        correlation_matrix = paddle.bmm(y_unfold_normalized, x_unfold_normalized)
+        correlation_matrix = correlation_matrix.masked_fill(non_mask_region == 1., -1e9)
+        correlation_matrix = F.softmax(correlation_matrix, axis=2)
 
         # print(correlation_matrix)
 
-        R, max_arg=paddle.max(correlation_matrix,axis=2)
+        R, max_arg = paddle.max(correlation_matrix, axis=2)
 
-        composed_unfold=self.Hard_Compose(x_unfold, 2, max_arg)
-        composed_fold=fold.fold(composed_unfold,output_size=(h,w),kernel_size=(self.patch_size,self.patch_size),padding=0,stride=self.patch_size)
+        composed_unfold = self.Hard_Compose(x_unfold, 2, max_arg)
+        composed_fold = fold.fold(composed_unfold, output_size=(h, w), kernel_size=(self.patch_size, self.patch_size),
+                                  padding=0, stride=self.patch_size)
 
-        concat_1=paddle.concat((z,composed_fold,mask),axis=1)
-        concat_1=self.F_Combine(concat_1)
+        concat_1 = paddle.concat((z, composed_fold, mask), axis=1)
+        concat_1 = self.F_Combine(concat_1)
 
         return concat_1
 
-    def inference_forward(self,z,mask): ## Reduce the extra memory cost
+    def inference_forward(self, z, mask):  ## Reduce the extra memory cost
 
+        x = self.res_block(z)
 
-        x=self.res_block(z)
-
-        b,c,h,w=x.shape
+        b, c, h, w = x.shape
 
         ## mask resize + dilation
         # tmp = 1 - mask
@@ -741,59 +746,58 @@ class Patch_Attention_4(nn.Layer):  ## While combine the feature map, use conv a
         # mask=1-mask
         ## 1: mask position 0: non-mask
 
-        mask_unfold=F.unfold(mask, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
-        non_mask_region=(paddle.mean(mask_unfold,axis=1,keepdim=True)>0.6).float()[0,0,:] # 1*1*all_patch_num
+        mask_unfold = F.unfold(mask, kernel_sizes=[self.patch_size, self.patch_size], paddings=0,
+                               strides=self.patch_size)
+        non_mask_region = (paddle.mean(mask_unfold, axis=1, keepdim=True) > 0.6).float()[0, 0, :]  # 1*1*all_patch_num
 
-        all_patch_num=h*w/self.patch_size/self.patch_size
+        all_patch_num = h * w / self.patch_size / self.patch_size
 
-        mask_index=paddle.nonzero(non_mask_region,as_tuple=True)[0]
+        mask_index = paddle.nonzero(non_mask_region, as_tuple=True)[0]
 
+        if len(mask_index) == 0:  ## No mask patch is selected, no attention is needed
 
-        if len(mask_index)==0: ## No mask patch is selected, no attention is needed
-
-            composed_fold=x
+            composed_fold = x
 
         else:
 
-            unmask_index=paddle.nonzero(non_mask_region!=1,as_tuple=True)[0]
+            unmask_index = paddle.nonzero(non_mask_region != 1, as_tuple=True)[0]
 
-            x_unfold=F.unfold(x, kernel_sizes=[self.patch_size,self.patch_size], paddings=0, strides=self.patch_size)
-            
-            Query_Patch=paddle.index_select(x_unfold,2,mask_index)
-            Key_Patch=paddle.index_select(x_unfold,2,unmask_index)
+            x_unfold = F.unfold(x, kernel_sizes=[self.patch_size, self.patch_size], paddings=0, strides=self.patch_size)
 
-            Query_Patch=Query_Patch.permute(0,2,1)        
-            Query_Patch_normalized=F.normalize(Query_Patch,axis=2)
-            Key_Patch_normalized=F.normalize(Key_Patch,axis=1)
+            Query_Patch = paddle.index_select(x_unfold, 2, mask_index)
+            Key_Patch = paddle.index_select(x_unfold, 2, unmask_index)
 
-            correlation_matrix=paddle.bmm(Query_Patch_normalized,Key_Patch_normalized)
-            correlation_matrix=F.softmax(correlation_matrix,axis=2)
+            Query_Patch = Query_Patch.permute(0, 2, 1)
+            Query_Patch_normalized = F.normalize(Query_Patch, axis=2)
+            Key_Patch_normalized = F.normalize(Key_Patch, axis=1)
 
+            correlation_matrix = paddle.bmm(Query_Patch_normalized, Key_Patch_normalized)
+            correlation_matrix = F.softmax(correlation_matrix, axis=2)
 
-            R, max_arg=paddle.max(correlation_matrix,axis=2)
+            R, max_arg = paddle.max(correlation_matrix, axis=2)
 
-            composed_unfold=self.Hard_Compose(Key_Patch, 2, max_arg)
-            x_unfold[:,:,mask_index]=composed_unfold
-            composed_fold=fold(x_unfold,output_size=(h,w),kernel_size=(self.patch_size,self.patch_size),padding=0,stride=self.patch_size)
+            composed_unfold = self.Hard_Compose(Key_Patch, 2, max_arg)
+            x_unfold[:, :, mask_index] = composed_unfold
+            composed_fold = fold(x_unfold, output_size=(h, w), kernel_size=(self.patch_size, self.patch_size),
+                                 padding=0, stride=self.patch_size)
 
-        concat_1=paddle.concat((z,composed_fold,mask),axis=1)
-        concat_1=self.F_Combine(concat_1)
-
+        concat_1 = paddle.concat((z, composed_fold, mask), axis=1)
+        concat_1 = self.F_Combine(concat_1)
 
         return concat_1
+
 
 ##############################################################################
 # Losses
 ##############################################################################
 class GANLoss(nn.Layer):
     def __init__(self, use_lsgan=True, target_real_label=1.0, target_fake_label=0.0,
-                 tensor=paddle.Tensor):#todo
+                 ):  # todo
         super(GANLoss, self).__init__()
         self.real_label = target_real_label
         self.fake_label = target_fake_label
         self.real_label_var = None
         self.fake_label_var = None
-        self.Tensor = tensor
         if use_lsgan:
             self.loss = nn.MSELoss()
         else:
@@ -805,16 +809,19 @@ class GANLoss(nn.Layer):
             create_label = ((self.real_label_var is None) or
                             (self.real_label_var.numel() != input.numel()))
             if create_label:
-                real_tensor = self.Tensor(input.shape).fill_(self.real_label)
-                self.real_label_var = paddle.to_tensor(real_tensor.astype(paddle.float32), stop_gradient=True)#todo
+                real_tensor = paddle.full_like(input,fill_value=self.real_label,dtype=paddle.float32)
+                real_tensor.stop_gradient = True
+                self.real_label_var = real_tensor
             target_tensor = self.real_label_var
         else:
             create_label = ((self.fake_label_var is None) or
                             (self.fake_label_var.numel() != input.numel()))
             if create_label:
-                fake_tensor = self.Tensor(input.shape).fill_(self.fake_label)
-                self.fake_label_var = paddle.to_tensor(fake_tensor.astype(paddle.float32), stop_gradient=True)
+                fake_tensor = paddle.full_like(input,fill_value=self.fake_label,dtype=paddle.float32)
+                fake_tensor.stop_gradient = True
+                self.fake_label_var = fake_tensor
             target_tensor = self.fake_label_var
+
         return target_tensor
 
     def __call__(self, input, target_is_real):
@@ -830,12 +837,12 @@ class GANLoss(nn.Layer):
             return self.loss(input[-1], target_tensor)
 
 
-
-
 ####################################### VGG Loss
 
 # from torchvision import models
 import x2paddle.models as models
+
+
 class VGG19_torch(paddle.nn.Layer):
     def __init__(self, stop_gradient=True):
         super(VGG19_torch, self).__init__()
@@ -868,12 +875,13 @@ class VGG19_torch(paddle.nn.Layer):
         out = [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5]
         return out
 
+
 class VGGLoss_torch(nn.Layer):
     def __init__(self, gpu_ids):
         super(VGGLoss_torch, self).__init__()
         self.vgg = VGG19_torch()
         self.criterion = nn.L1Loss()
-        self.weights = [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]
+        self.weights = [1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0]
 
     def forward(self, x, y):
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)

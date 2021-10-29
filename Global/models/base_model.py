@@ -14,7 +14,6 @@ class BaseModel(paddle.nn.Layer):
         self.opt = opt
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
-        self.Tensor = paddle.Tensor   #todo
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
 
     def set_input(self, input):

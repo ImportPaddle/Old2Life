@@ -79,7 +79,7 @@ class Pix2PixHDModel(BaseModel):
             # define loss functions
             self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss)
 
-            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)
+            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan)
             self.criterionFeat = paddle.nn.L1Loss()
             if not opt.no_vgg_loss:
                 self.criterionVGG = networks.VGGLoss_torch(self.gpu_ids)
@@ -169,8 +169,12 @@ class Pix2PixHDModel(BaseModel):
 
     def forward(self, label, inst, image, feat, infer=False):
         # Encode Inputs
+        # print('label:',label)
+        # print('inst',inst)
+        # print('image:',image)
+        # print('feat:',feat)
         input_label, inst_map, real_image, feat_map = self.encode_input(label, inst, image, feat)
-        print('one: Encode Inputs')
+        # print('one: Encode Inputs')
         # Fake Generation
         if self.use_features:
             if not self.opt.load_features:
@@ -180,16 +184,15 @@ class Pix2PixHDModel(BaseModel):
             input_concat = input_label
         hiddens = self.netG.forward(input_concat, 'enc')
         noise = paddle.to_tensor(paddle.randn(hiddens.shape))
-        print('Fake Generation')
         # This is a reduced VAE implementation where we assume the outputs are multivariate Gaussian distribution with mean = hiddens and std_dev = all ones.
         # We follow the the VAE of MUNIT (https://github.com/NVlabs/MUNIT/blob/master/networks.py)
-        fake_image = self.netG.forward(hiddens + noise, 'dec')
-        print('111111')
+        fake_image=self.netG.forward(hiddens+noise,'dec')
         ####################
         ##### GAN for the intermediate feature
         real_old_feat = []
         syn_feat = []
-        for index, x in enumerate(inst):
+        inst_numpy=inst.numpy()
+        for index,x in enumerate(inst_numpy):
             if x == 1:
                 real_old_feat.append(hiddens[index].unsqueeze(0))
             else:
@@ -197,17 +200,14 @@ class Pix2PixHDModel(BaseModel):
         L = min(len(real_old_feat), len(syn_feat))
         real_old_feat = real_old_feat[:L]
         syn_feat = syn_feat[:L]
-        real_old_feat = paddle.concat(real_old_feat, 0)
-        syn_feat = paddle.concat(syn_feat, 0)
-        print('22222')
+        real_old_feat = paddle.concat(real_old_feat, axis=0)
+        syn_feat = paddle.concat(syn_feat, axis=0)
         pred_fake_feat = self.feat_discriminate(real_old_feat)
         loss_featD_fake = self.criterionGAN(pred_fake_feat, False)
         pred_real_feat = self.feat_discriminate(syn_feat)
         loss_featD_real = self.criterionGAN(pred_real_feat, True)
-        print('33333')
         pred_fake_feat_G = self.feat_D.forward(real_old_feat)
         loss_G_featD = self.criterionGAN(pred_fake_feat_G, True)
-        print('three')
         #####################################
         if self.opt.no_cgan:
             # Fake Detection and Loss
@@ -254,7 +254,6 @@ class Pix2PixHDModel(BaseModel):
 
         # Only return the fake_B image if necessary to save BW
 
-        raise NotImplementedError('i don\'t known')
         return [
             self.loss_filter(loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_G_kl, loss_D_real, loss_D_fake, loss_G_featD,
                              loss_featD_real, loss_featD_fake),
