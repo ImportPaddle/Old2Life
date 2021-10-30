@@ -18,6 +18,7 @@ import paddle
 import torchvision_paddle.utils as vutils
 from paddle.autograd import PyLayer
 import datetime
+import paddle.distributed as dist
 import random
 
 
@@ -30,16 +31,27 @@ if opt.continue_train:
         start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
     except:
         start_epoch, epoch_iter = 0, 0
-    visualizer.print_save('Resuming from epoch %d at iteration %d' % (start_epoch-1, epoch_iter))
+    if opt.isTrain and len(opt.gpu_ids) > 1:
+        visualizer.print_save('Resuming from epoch %d at iteration %d' % (start_epoch - 1, epoch_iter)) if dist.get_rank() == 0 else None
+    else:
+        visualizer.print_save('Resuming from epoch %d at iteration %d' % (start_epoch-1, epoch_iter))
+
 else:
     start_epoch, epoch_iter = 0, 0
 
 if opt.which_epoch != "latest":
     start_epoch=int(opt.which_epoch)
-    visualizer.print_save('Notice : Resuming from epoch %d at iteration %d' % (start_epoch - 1, epoch_iter))
+    if opt.isTrain and len(opt.gpu_ids) > 1:
+        visualizer.print_save('Notice : Resuming from epoch %d at iteration %d' % (start_epoch - 1, epoch_iter))if dist.get_rank() == 0 else None
+    else:
+        visualizer.print_save('Notice : Resuming from epoch %d at iteration %d' % (start_epoch - 1, epoch_iter))
+
 
 opt.start_epoch=start_epoch
 ### temp for continue train unfixed decoder
+
+if opt.isTrain and len(opt.gpu_ids) > 1:
+    paddle.distributed.init_parallel_env()
 
 data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
@@ -116,7 +128,11 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
         if i == 0 or total_steps % opt.print_freq == print_delta:
             errors = {k: v.data if not isinstance(v, int) else v for k, v in loss_dict.items()}
             t = (time.time() - iter_start_time) / opt.batchSize
-            visualizer.print_current_errors(epoch, epoch_iter, errors, t,model.module.old_lr)
+            if opt.isTrain and len(opt.gpu_ids) > 1:
+                visualizer.print_current_errors(epoch, epoch_iter, errors, t,model.module.old_lr) if dist.get_rank()==0 else None
+            else:
+                visualizer.print_current_errors(epoch, epoch_iter, errors, t,model.module.old_lr)
+
             # visualizer.plot_current_errors(errors, total_steps)
 
         ### display output images

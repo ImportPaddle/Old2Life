@@ -6,6 +6,7 @@ import os
 import ntpath
 import time
 from . import util
+import paddle.distributed as dist
 #from . import html
 import scipy.misc
 try:
@@ -34,7 +35,10 @@ class Visualizer():
         self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
         with open(self.log_name, "a") as log_file:
             now = time.strftime("%c")
-            log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now)
+            if opt.isTrain and len(opt.gpu_ids) > 1:
+                log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now) if dist.get_rank()==0 else None
+            else:
+                log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now)
 
     # |visuals|: dictionary of images to display or save
     # def display_current_results(self, visuals, epoch, step):
@@ -110,6 +114,7 @@ class Visualizer():
 
         print(message)
         with open(self.log_name, "a") as log_file:
+
             log_file.write('%s\n' % message)
 
 
