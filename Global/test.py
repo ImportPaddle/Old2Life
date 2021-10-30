@@ -173,13 +173,13 @@ if __name__ == "__main__":
         with paddle.no_grad():
             generated = model.inference(input, mask)
 
-        # try:
-        #     with paddle.no_grad():
-        #         generated = model.inference(input, mask)
-        #
-        # except Exception as ex:
-        #     print("Skip %s due to an error:\n%s" % (input_name, str(ex)))
-        #     continue
+        try:
+            with paddle.no_grad():
+                generated = model.inference(input, mask)
+
+        except Exception as ex:
+            print("Skip %s due to an error:\n%s" % (input_name, str(ex)))
+            continue
 
         if input_name.endswith(".jpg"):
             input_name = input_name[:-4] + ".png"

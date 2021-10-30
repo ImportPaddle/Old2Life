@@ -256,6 +256,7 @@ class UnPairOldPhotos_SR(BaseDataset):  ## Synthetic + Real Old
 
         if random.uniform(0,1) <0.1:
             img=img.convert("L")
+        else:                   # need?
             img=img.convert("RGB")
             ## Give a probability P, we convert the RGB image into L
 
@@ -435,6 +436,7 @@ class PairOldPhotos_with_hole(BaseDataset):
         if random.uniform(0,1)<0.1 and self.opt.isTrain:
             A=A.convert("L")
             B=B.convert("L")
+        else:
             A=A.convert("RGB")
             B=B.convert("RGB")
         ## In P, we convert the RGB into L

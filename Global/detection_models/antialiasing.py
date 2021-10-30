@@ -65,9 +65,9 @@ class Downsample(nn.Layer):
 
 def get_pad_layer(pad_type):
     if pad_type in ["refl", "reflect"]:
-        PadLayer = nn.Pad2D
+        PadLayer = nn.Pad2D(mode='reflect')
     elif pad_type in ["repl", "replicate"]:
-        PadLayer = nn.Pad2D
+        PadLayer = nn.Pad2D(mode='replicate')
     elif pad_type == "zero":
         PadLayer = nn.Pad2D(value=0.0)
     else:

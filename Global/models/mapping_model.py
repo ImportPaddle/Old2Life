@@ -12,7 +12,7 @@ from util.image_pool import ImagePool
 from models.base_model import BaseModel
 # from models import networks
 import math
-# from models.NonLocal_feature_mapping_model import *
+from models.NonLocal_feature_mapping_model import *
 
 
 class Mapping_Model(nn.Layer):

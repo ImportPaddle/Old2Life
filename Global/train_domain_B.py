@@ -48,6 +48,8 @@ if opt.continue_train:
 else:
     start_epoch, epoch_iter = 0, 0
 
+if opt.isTrain and len(opt.gpu_ids) > 1:
+    paddle.distributed.init_parallel_env()
 # opt.which_epoch=start_epoch-1
 model = create_model(opt)
 fd = open(path, 'w')
@@ -60,6 +62,9 @@ total_steps = (start_epoch - 1) * dataset_size + epoch_iter
 display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
+
+if opt.isTrain and len(opt.gpu_ids) > 1:
+    model = paddle.DataParallel(model)
 
 for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
     epoch_start_time = time.time()

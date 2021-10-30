@@ -49,7 +49,7 @@ if opt.which_epoch != "latest":
     start_epoch = int(opt.which_epoch)
     if opt.isTrain and len(opt.gpu_ids) > 1:
         visualizer.print_save('Notice : Resuming from epoch %d at iteration %d' % (
-        start_epoch - 1, epoch_iter)) if dist.get_rank() == 0 else None
+            start_epoch - 1, epoch_iter)) if dist.get_rank() == 0 else None
     else:
         visualizer.print_save('Notice : Resuming from epoch %d at iteration %d' % (start_epoch - 1, epoch_iter))
 
@@ -78,15 +78,15 @@ else:
     fd.write(str(model.mapping_net))
     fd.close()
 
-if opt.isTrain and len(opt.gpu_ids) > 1:
-    model = paddle.DataParallel(model)
-
 total_steps = (start_epoch - 1) * dataset_size + epoch_iter
 
 display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 ### used for recovering training
+
+if opt.isTrain and len(opt.gpu_ids) > 1:
+    model = paddle.DataParallel(model)
 
 for epoch in range(start_epoch, opt.niter + opt.niter_decay):
     epoch_s_t = datetime.datetime.now()
@@ -161,9 +161,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
             imgs = (imgs + 1.) / 2.0  ## de-normalize
 
             try:
-                image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
-                    total_steps) + '.png',
-                                               nrow=imgs_num, padding=0, normalize=True)
+                vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
+                    total_steps) + '.png', nrow=imgs_num, padding=0, normalize=True)
             except OSError as err:
                 print(err)
 
@@ -176,17 +175,17 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
     print('End of epoch %d / %d \t Time Taken: %s' %
           (epoch, opt.niter + opt.niter_decay, str(epoch_e_t - epoch_s_t)))
 
-    ### save model for this epoch
+    # save model for this epoch
     if epoch % opt.save_epoch_freq == 0:
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
         model.module.save('latest')
         model.module.save(epoch)
-        np.savetxt(iter_path, (epoch + 1, 0), delimiter=',', fmt='%d')
+        np.savetxt(iter_path, epoch + 1, delimiter=',', fmt='%d')
 
-    ### instead of only training the local enhancer, train the entire network after certain iterations
+    # instead of only training the local enhancer, train the entire network after certain iterations
     if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
         model.module.update_fixed_params()
 
-    ### linearly decay learning rate after certain iterations
+    # linearly decay learning rate after certain iterations
     if epoch > opt.niter:
         model.module.update_learning_rate()
