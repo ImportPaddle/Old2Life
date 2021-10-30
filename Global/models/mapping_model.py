@@ -10,9 +10,9 @@ import functools
 # from torch.autograd import Variable
 from util.image_pool import ImagePool
 from models.base_model import BaseModel
-from models import networks
+# from models import networks
 import math
-from models.NonLocal_feature_mapping_model import *
+# from models.NonLocal_feature_mapping_model import *
 
 
 class Mapping_Model(nn.Layer):
@@ -247,16 +247,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
             return self.netD.forward(input_concat)
 
     def save(self, which_epoch):
-        self.save_network(self.netG, 'G', which_epoch, self.gpu_ids)
-        self.save_network(self.netD, 'D', which_epoch, self.gpu_ids)
-        self.save_network(self.feat_D, 'featD', which_epoch, self.gpu_ids)
-
-        self.save_optimizer(self.optimizer_G, "G", which_epoch)
-        self.save_optimizer(self.optimizer_D, "D", which_epoch)
-        self.save_optimizer(self.optimizer_featD, 'featD', which_epoch)
-
-        if self.gen_features:
-            self.save_network(self.netE, 'E', which_epoch, self.gpu_ids)
+        self.save_network(self.mapping_net, 'mapping_net', which_epoch, self.gpu_ids)
 
     def forward(self, label, inst, image, feat, pair=True, infer=False, last_label=None, last_image=None):
         # Encode Inputs
