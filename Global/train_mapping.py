@@ -29,10 +29,10 @@ if opt.continue_train:
     try:
         start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
     except:
-        start_epoch, epoch_iter = 1, 0
+        start_epoch, epoch_iter = 0, 0
     visualizer.print_save('Resuming from epoch %d at iteration %d' % (start_epoch-1, epoch_iter))
 else:
-    start_epoch, epoch_iter = 1, 0
+    start_epoch, epoch_iter = 0, 0
 
 if opt.which_epoch != "latest":
     start_epoch=int(opt.which_epoch)
@@ -73,7 +73,7 @@ print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 ### used for recovering training
 
-for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
+for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
     epoch_s_t=datetime.datetime.now()
     epoch_start_time = time.time()
     if epoch != start_epoch:
@@ -117,7 +117,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             errors = {k: v.data if not isinstance(v, int) else v for k, v in loss_dict.items()}
             t = (time.time() - iter_start_time) / opt.batchSize
             visualizer.print_current_errors(epoch, epoch_iter, errors, t,model.module.old_lr)
-            visualizer.plot_current_errors(errors, total_steps)
+            # visualizer.plot_current_errors(errors, total_steps)
 
         ### display output images
         if save_fake:

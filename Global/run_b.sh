@@ -1,7 +1,7 @@
 python Global/train_domain_B.py \
 --use_v2_degradation \
 --training_dataset domain_B \
---name domainA_SR_old_photos \
+--name domainB_old_photos \
 --label_nc 0 \
 --loadSize 256 \
 --fineSize 256 \
@@ -13,7 +13,7 @@ python Global/train_domain_B.py \
 --nThreads 4 \
 --n_downsample_global 3 \
 --k_size 4 --use_v2 --mc 64 --start_r 1 --kl 1 --no_cgan \
---dataroot D:\\Desktop\\plan\\Old2Life\\Global\\test_old \
---outputs_dir D:\\Desktop\\plan\\Old2Life\\Global\\test_outputs \
---checkpoints_dir D:\\Desktop\\plan\\Old2Life\\Global\\test_checkpoints \
+--dataroot /home/aistudio/work/Old2Life/test_old \
+--outputs_dir /home/aistudio/work/Old2Life/output/ \
+--checkpoints_dir /home/aistudio/work/Old2Life/test_checkpoints \
 --debug

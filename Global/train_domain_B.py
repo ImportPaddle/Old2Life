@@ -98,17 +98,15 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
         loss_D.backward()
         model.module.optimizer_D.step()
 
-        print(f'epoch:{epoch}=====batch_id:{i}=====loss_G:{loss_G.mean().numpy()}=====loss_D:{loss_D.mean().numpy()}')
-
         # call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
-
+        # print(f'epoch:{epoch}=====batch_id:{i}=====loss_G:{loss_G.mean().numpy()}=====loss_D:{loss_D.mean().numpy()}')
         ############## Display results and errors ##########
         ### print out errors
         if total_steps % opt.print_freq == print_delta:
             errors = {k: v.data if not isinstance(v, int) else v for k, v in loss_dict.items()}
             t = (time.time() - iter_start_time) / opt.batchSize
             visualizer.print_current_errors(epoch, epoch_iter, errors, t, model.module.old_lr)
-            visualizer.plot_current_errors(errors, total_steps)
+            # visualizer.plot_current_errors(errors, total_steps)
 
         ### display output images
         if save_fake:
@@ -116,7 +114,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
             if not os.path.exists(opt.outputs_dir + opt.name):
                 os.makedirs(opt.outputs_dir + opt.name)
             imgs_num = 5
-            imgs = paddle.concat((data['label'][:imgs_num], generated.data.cpu()[:imgs_num], data['image'][:imgs_num]),
+            imgs = paddle.concat((data['label'][:imgs_num], generated[:imgs_num], data['image'][:imgs_num]),
                                  0)
 
             imgs = (imgs + 1.) / 2.0

@@ -34,19 +34,19 @@ class Visualizer():
         self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
         with open(self.log_name, "a") as log_file:
             now = time.strftime("%c")
-            log_file.write('================ Training Loss (%s) ================\n' % now)
+            log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now)
 
     # |visuals|: dictionary of images to display or save
-    def display_current_results(self, visuals, epoch, step):
-        if self.tf_log: # show images in tensorboard output
-            img_summaries = []
-            for label, image_numpy in visuals.items():
-                # Write the image to a string
-                try:
-                    s = StringIO()
-                except:
-                    s = BytesIO()
-                scipy.misc.toimage(image_numpy).save(s, format="jpeg")
+    # def display_current_results(self, visuals, epoch, step):
+    #     if self.tf_log: # show images in tensorboard output
+    #         img_summaries = []
+    #         for label, image_numpy in visuals.items():
+    #             # Write the image to a string
+    #             try:
+    #                 s = StringIO()
+    #             except:
+    #                 s = BytesIO()
+    #             scipy.misc.toimage(image_numpy).save(s, format="jpeg")
                 # Create an Image object
                 # img_sum = self.tf.Summary.Image(encoded_image_string=s.getvalue(), height=image_numpy.shape[0], width=image_numpy.shape[1])
                 # Create a Summary value
@@ -56,15 +56,15 @@ class Visualizer():
             # summary = self.tf.Summary(value=img_summaries)
             # self.writer.add_summary(summary, step)
 
-        if self.use_html: # save images to a html file
-            for label, image_numpy in visuals.items():
-                if isinstance(image_numpy, list):
-                    for i in range(len(image_numpy)):
-                        img_path = os.path.join(self.img_dir, 'epoch%.3d_%s_%d.jpg' % (epoch, label, i))
-                        util.save_image(image_numpy[i], img_path)
-                else:
-                    img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.jpg' % (epoch, label))
-                    util.save_image(image_numpy, img_path)
+        # if self.use_html: # save images to a html file
+        #     for label, image_numpy in visuals.items():
+        #         if isinstance(image_numpy, list):
+        #             for i in range(len(image_numpy)):
+        #                 img_path = os.path.join(self.img_dir, 'epoch%.3d_%s_%d.jpg' % (epoch, label, i))
+        #                 util.save_image(image_numpy[i], img_path)
+        #         else:
+        #             img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.jpg' % (epoch, label))
+        #             util.save_image(image_numpy, img_path)
 
             # update website
             # webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=30)
@@ -103,7 +103,7 @@ class Visualizer():
 
     # errors: same format as |errors| of plotCurrentErrors
     def print_current_errors(self, epoch, i, errors, t, lr):
-        message = 'epoch: %d, iters: %d, time: %.3f lr: %.5f || ' % (epoch, i, t, lr)
+        message = 'Epoch: %d, Iters: %d, Time: %.3f lr: %.5f || ' % (epoch, i, t, lr)
         for k, v in errors.items():
             if v != 0:
                 message += '%s: %.3f ' % (k, v)

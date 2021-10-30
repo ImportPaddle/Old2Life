@@ -103,14 +103,14 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
         model.module.optimizer_featD.step()
 
         # call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
-        print(f'epoch:{epoch}=====batch_id:{i}=====loss_G:{loss_G.mean().numpy()}=====loss_D:{loss_D.mean().numpy()}')
+        # print(f'epoch:{epoch}=====batch_id:{i}=====loss_G:{loss_G.mean().numpy()}=====loss_D:{loss_D.mean().numpy()}')
         ############## Display results and errors ##########
         ### print out errors
         if total_steps % opt.print_freq == print_delta:
             errors = {k: v.data if not isinstance(v, int) else v for k, v in loss_dict.items()}
             t = (time.time() - iter_start_time) / opt.batchSize
             visualizer.print_current_errors(epoch, epoch_iter, errors, t, model.module.old_lr)
-            visualizer.plot_current_errors(errors, total_steps)
+            # visualizer.plot_current_errors(errors, total_steps)
 
         ### display output images
         if save_fake:
