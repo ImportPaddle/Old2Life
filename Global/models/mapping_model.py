@@ -171,7 +171,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
             # define loss functions
             self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss, opt.Smooth_L1, opt.use_two_stage_mapping)
 
-            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)
+            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan)
 
 
             self.criterionFeat = paddle.nn.L1Loss()
@@ -245,6 +245,18 @@ class Pix2PixHDModel_Mapping(BaseModel):
             return self.netD.forward(fake_query)
         else:
             return self.netD.forward(input_concat)
+
+    def save(self, which_epoch):
+        self.save_network(self.netG, 'G', which_epoch, self.gpu_ids)
+        self.save_network(self.netD, 'D', which_epoch, self.gpu_ids)
+        self.save_network(self.feat_D, 'featD', which_epoch, self.gpu_ids)
+
+        self.save_optimizer(self.optimizer_G, "G", which_epoch)
+        self.save_optimizer(self.optimizer_D, "D", which_epoch)
+        self.save_optimizer(self.optimizer_featD, 'featD', which_epoch)
+
+        if self.gen_features:
+            self.save_network(self.netE, 'E', which_epoch, self.gpu_ids)
 
     def forward(self, label, inst, image, feat, pair=True, infer=False, last_label=None, last_image=None):
         # Encode Inputs
@@ -322,6 +334,40 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
         return [ self.loss_filter(loss_feat_l2, loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake,smooth_l1_loss,loss_feat_l2_stage_1), None if not infer else fake_image ]
 
+    def encode_features(self, image, inst):
+        image = paddle.to_tensor(image)
+        feat_num = self.opt.feat_num
+        h, w = inst.shape[2], inst.shape[3]
+        block_num = 32
+        feat_map = self.netE.forward(image, inst)
+        inst_np = inst.cpu().numpy().astype(int)
+        feature = {}
+        for i in range(self.opt.label_nc):
+            feature[i] = np.zeros((0, feat_num + 1))
+        for i in np.unique(inst_np):
+            label = i if i < 1000 else i // 1000
+            idx = (inst == int(i)).nonzero()
+            num = idx.shape[0]
+            idx = idx[num // 2, :]
+            val = np.zeros((1, feat_num + 1))
+            for k in range(feat_num):
+                val[0, k] = feat_map[idx[0], idx[1] + k, idx[2], idx[3]].data[0]
+            val[0, feat_num] = float(num) / (h * w // block_num)
+            feature[label] = np.append(feature[label], val, axis=0)
+        return feature
+
+    def get_edges(self, t):
+        # edge = torch.cuda.ByteTensor(t.shape).zero_()
+        edge = paddle.zeros_like(t, dtype=paddle.int8)
+        edge[:, :, :, 1:] = edge[:, :, :, 1:] | (t[:, :, :, 1:] != t[:, :, :, :-1])
+        edge[:, :, :, :-1] = edge[:, :, :, :-1] | (t[:, :, :, 1:] != t[:, :, :, :-1])
+        edge[:, :, 1:, :] = edge[:, :, 1:, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
+        edge[:, :, :-1, :] = edge[:, :, :-1, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
+        if self.opt.data_type == 16:
+            return edge.astype(paddle.int16)
+        else:
+            return edge.astype(paddle.float32)
+
 
     def inference(self, label, inst):
 
@@ -341,6 +387,29 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
         fake_image = self.netG_B.forward(label_feat_map, flow="dec")
         return fake_image
+
+    def update_fixed_params(self):
+
+        params = list(self.netG.parameters())
+        if self.gen_features:
+            params += list(self.netE.parameters())
+        self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=self.opt.lr, beta1=self.opt.beta1,
+                                                 beta2=0.999)
+        if self.opt.verbose:
+            print('------------ Now also finetuning global generator -----------')
+
+    def update_learning_rate(self):
+        lrd = self.opt.lr / self.opt.niter_decay
+        lr = self.old_lr - lrd
+        for param_group in self.optimizer_D._parameter_list:
+            param_group['lr'] = lr
+        for param_group in self.optimizer_G._parameter_list:
+            param_group['lr'] = lr
+        for param_group in self.optimizer_featD._parameter_list:
+            param_group['lr'] = lr
+        if self.opt.verbose:
+            print('update learning rate: %f -> %f' % (self.old_lr, lr))
+        self.old_lr = lr
 
 
 class InferenceModel(Pix2PixHDModel_Mapping):

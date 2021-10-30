@@ -168,14 +168,7 @@ class Pix2PixHDModel(BaseModel):
         return self.feat_D.forward(input.detach())
 
     def forward(self, label, inst, image, feat, infer=False):
-        # Encode Inputs
-        # print('label:',label)
-        # print('inst',inst)
-        # print('image:',image)
-        # print('feat:',feat)
         input_label, inst_map, real_image, feat_map = self.encode_input(label, inst, image, feat)
-        # print('one: Encode Inputs')
-        # Fake Generation
         if self.use_features:
             if not self.opt.load_features:
                 feat_map = self.netE.forward(real_image, inst_map)
@@ -335,9 +328,9 @@ class Pix2PixHDModel(BaseModel):
         edge[:, :, 1:, :] = edge[:, :, 1:, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
         edge[:, :, :-1, :] = edge[:, :, :-1, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
         if self.opt.data_type == 16:
-            return edge.half()
+            return edge.astype(paddle.int16)
         else:
-            return edge.float()
+            return edge.astype(paddle.float32)
 
     def save(self, which_epoch):
         self.save_network(self.netG, 'G', which_epoch, self.gpu_ids)

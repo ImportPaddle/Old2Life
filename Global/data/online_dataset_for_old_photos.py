@@ -291,7 +291,7 @@ class PairOldPhotos(BaseDataset):
         self.task = 'old_photo_restoration_training_mapping'
         self.dir_AB = opt.dataroot
         if opt.isTrain:
-            self.load_img_dir_clean= os.path.join(self.dir_AB, "VOC_RGB_JPEGImages.bigfile")
+            self.load_img_dir_clean= os.path.join(self.dir_AB, "VOC.bigfile")
             self.loaded_imgs_clean = BigFileMemoryLoader(self.load_img_dir_clean)
 
             print("-------------Filter the imgs whose size <256 in VOC-------------")
@@ -387,7 +387,7 @@ class PairOldPhotos_with_hole(BaseDataset):
         self.task = 'old_photo_restoration_training_mapping'
         self.dir_AB = opt.dataroot
         if opt.isTrain:
-            self.load_img_dir_clean= os.path.join(self.dir_AB, "VOC_RGB_JPEGImages.bigfile")
+            self.load_img_dir_clean= os.path.join(self.dir_AB, "VOC.bigfile")
             self.loaded_imgs_clean = BigFileMemoryLoader(self.load_img_dir_clean)
 
             print("-------------Filter the imgs whose size <256 in VOC-------------")
