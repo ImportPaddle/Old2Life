@@ -9,6 +9,12 @@ from . import util
 import paddle.distributed as dist
 #from . import html
 import scipy.misc
+
+from .PSNR_SSIM import calculate_psnr,calculate_ssim
+from .LPIPS import LPIPS as LPIPS_class
+from .FID import calculate_fid_given_img
+
+
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
@@ -116,6 +122,13 @@ class Visualizer():
         with open(self.log_name, "a") as log_file:
 
             log_file.write('%s\n' % message)
+
+    def print_current_performance(self,fake_image,clean_image):
+        PSNR=calculate_psnr(fake_image,clean_image,0)
+        SSIM=calculate_ssim(fake_image,clean_image,0)
+        FID=calculate_fid_given_img(fake_image,clean_image)
+        LPIPS=LPIPS_class().forward(fake_image,clean_image)
+
 
 
     def print_save(self,message):

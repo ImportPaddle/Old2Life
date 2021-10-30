@@ -12,14 +12,14 @@ __all__ = ["make_grid", "save_image", "draw_bounding_boxes"]
 
 @paddle.no_grad()
 def make_grid(
-    tensor: Union[paddle.Tensor, List[paddle.Tensor]],
-    nrow: int = 8,
-    padding: int = 2,
-    normalize: bool = False,
-    value_range: Optional[Tuple[int, int]] = None,
-    scale_each: bool = False,
-    pad_value: int = 0,
-    **kwargs
+        tensor: Union[paddle.Tensor, List[paddle.Tensor]],
+        nrow: int = 8,
+        padding: int = 2,
+        normalize: bool = False,
+        value_range: Optional[Tuple[int, int]] = None,
+        scale_each: bool = False,
+        pad_value: int = 0,
+        **kwargs
 ) -> paddle.Tensor:
     """Make a grid of images.
 
@@ -103,18 +103,17 @@ def make_grid(
         for x in range(xmaps):
             if k >= nmaps:
                 break
-            grid[:, y * height + padding:(y + 1) * height, x * width + padding:(
-                                                                                       x + 1) * width] = tensor[k]
+            grid[:, y * height + padding:(y + 1) * height, x * width + padding:(x + 1) * width] = tensor[k]
             k = k + 1
     return grid
 
 
 @paddle.no_grad()
 def save_image(
-    tensor: Union[paddle.Tensor, List[paddle.Tensor]],
-    fp: Union[Text, pathlib.Path, BinaryIO],
-    format: Optional[str] = None,
-    **kwargs
+        tensor: Union[paddle.Tensor, List[paddle.Tensor]],
+        fp: Union[Text, pathlib.Path, BinaryIO],
+        format: Optional[str] = None,
+        **kwargs
 ) -> None:
     """Save a given Tensor into an image file.
 
@@ -128,24 +127,23 @@ def save_image(
     """
 
     grid = make_grid(tensor, **kwargs)
-    # Add 0.5 after unnormalizing to [0, 255] to round to nearest integer
-    ndarr = grid.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', paddle.uint8).numpy()
+    ndarr = paddle.clip(grid * 255 + 0.5, 0, 255).transpose(
+        [1, 2, 0]).cast("uint8").numpy()
     im = Image.fromarray(ndarr)
     im.save(fp, format=format)
 
 
 @paddle.no_grad()
 def draw_bounding_boxes(
-    image: paddle.Tensor,
-    boxes: paddle.Tensor,
-    labels: Optional[List[str]] = None,
-    colors: Optional[List[Union[str, Tuple[int, int, int]]]] = None,
-    fill: Optional[bool] = False,
-    width: int = 1,
-    font: Optional[str] = None,
-    font_size: int = 10
+        image: paddle.Tensor,
+        boxes: paddle.Tensor,
+        labels: Optional[List[str]] = None,
+        colors: Optional[List[Union[str, Tuple[int, int, int]]]] = None,
+        fill: Optional[bool] = False,
+        width: int = 1,
+        font: Optional[str] = None,
+        font_size: int = 10
 ) -> paddle.Tensor:
-
     """
     Draws bounding boxes on given image.
     The values of the input image should be uint8 between 0 and 255.
@@ -210,4 +208,4 @@ def draw_bounding_boxes(
         if labels is not None:
             draw.text((bbox[0], bbox[1]), labels[i], fill=color, font=txt_font)
 
-    return paddle.to_tensor(np.array(img_to_draw)).transpose([2,0,1])
+    return paddle.to_tensor(np.array(img_to_draw)).transpose([2, 0, 1])
