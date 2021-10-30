@@ -139,6 +139,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
                                                 model.module.old_lr) if dist.get_rank() == 0 else None
             else:
                 visualizer.print_current_errors(epoch, epoch_iter, errors, t, model.module.old_lr)
+                visualizer.print_current_performance(epoch, generated[0], data['image'][0])
 
             # visualizer.plot_current_errors(errors, total_steps)
 
@@ -180,7 +181,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
         model.module.save('latest')
         model.module.save(epoch)
-        np.savetxt(iter_path, epoch + 1, delimiter=',', fmt='%d')
+
+        np.savetxt(iter_path, (epoch+1,0) , delimiter=',', fmt='%d')
 
     # instead of only training the local enhancer, train the entire network after certain iterations
     if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
@@ -189,3 +191,5 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
     # linearly decay learning rate after certain iterations
     if epoch > opt.niter:
         model.module.update_learning_rate()
+
+

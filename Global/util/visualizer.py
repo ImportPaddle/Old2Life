@@ -9,7 +9,7 @@ from . import util
 import paddle.distributed as dist
 # from . import html
 import scipy.misc
-
+from PIL import Image
 from .PSNR_SSIM import calculate_psnr, calculate_ssim
 from .LPIPS import LPIPS as LPIPS_class
 from .FID import calculate_fid_given_img
@@ -124,7 +124,9 @@ class Visualizer():
 
             log_file.write('%s\n' % message)
 
-    def print_current_performance(self, Epoch, fake_image, clean_image):
+    def print_current_performance(self, Epoch, fake_tensor, clean_tensor):
+        fake_image=Image.fromarray(np.array(fake_tensor))
+        clean_image=Image.fromarray(np.array(clean_tensor))
         PSNR = calculate_psnr(fake_image, clean_image, 0)
         SSIM = calculate_ssim(fake_image, clean_image, 0)
         FID = calculate_fid_given_img(fake_image, clean_image)

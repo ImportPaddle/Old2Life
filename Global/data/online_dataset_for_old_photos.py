@@ -40,7 +40,7 @@ def np_to_pil(img_np):
     if img_np.shape[0] == 1:
         ar = ar[0]
     else:
-        ar = ar.transpose(1, 2, 0)
+        ar = ar.transpose((1, 2, 0))
 
     return Image.fromarray(ar)
 
@@ -251,7 +251,7 @@ class UnPairOldPhotos_SR(BaseDataset):  ## Synthetic + Real Old
 
         if random.uniform(0, 1) < 0.1:
             img = img.convert("L")
-        else:  # need?
+        # else:  # need?
             img = img.convert("RGB")
             ## Give a probability P, we convert the RGB image into L
 
@@ -330,7 +330,7 @@ class PairOldPhotos(BaseDataset):
         if random.uniform(0, 1) < 0.1 and self.opt.isTrain:
             A = A.convert("L")
             B = B.convert("L")
-        else:
+        # else:
             A = A.convert("RGB")
             B = B.convert("RGB")
         ## In P, we convert the RGB into L
@@ -423,7 +423,7 @@ class PairOldPhotos_with_hole(BaseDataset):
         if random.uniform(0, 1) < 0.1 and self.opt.isTrain:
             A = A.convert("L")
             B = B.convert("L")
-        else:
+        # else:
             A = A.convert("RGB")
             B = B.convert("RGB")
         ## In P, we convert the RGB into L
