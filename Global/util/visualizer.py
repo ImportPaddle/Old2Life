@@ -7,18 +7,18 @@ import ntpath
 import time
 from . import util
 import paddle.distributed as dist
-#from . import html
+# from . import html
 import scipy.misc
 
-from .PSNR_SSIM import calculate_psnr,calculate_ssim
+from .PSNR_SSIM import calculate_psnr, calculate_ssim
 from .LPIPS import LPIPS as LPIPS_class
 from .FID import calculate_fid_given_img
-
 
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
-    from io import BytesIO         # Python 3.x
+    from io import BytesIO  # Python 3.x
+
 
 class Visualizer():
     def __init__(self, opt):
@@ -42,7 +42,8 @@ class Visualizer():
         with open(self.log_name, "a") as log_file:
             now = time.strftime("%c")
             if opt.isTrain and len(opt.gpu_ids) > 1:
-                log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now) if dist.get_rank()==0 else None
+                log_file.write(
+                    f'================ Training {opt.name} Loss (%s) ================\n' % now) if dist.get_rank() == 0 else None
             else:
                 log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now)
 
@@ -57,52 +58,52 @@ class Visualizer():
     #             except:
     #                 s = BytesIO()
     #             scipy.misc.toimage(image_numpy).save(s, format="jpeg")
-                # Create an Image object
-                # img_sum = self.tf.Summary.Image(encoded_image_string=s.getvalue(), height=image_numpy.shape[0], width=image_numpy.shape[1])
-                # Create a Summary value
-                # img_summaries.append(self.tf.Summary.Value(tag=label, image=img_sum))
+    # Create an Image object
+    # img_sum = self.tf.Summary.Image(encoded_image_string=s.getvalue(), height=image_numpy.shape[0], width=image_numpy.shape[1])
+    # Create a Summary value
+    # img_summaries.append(self.tf.Summary.Value(tag=label, image=img_sum))
 
-            # Create and write Summary
-            # summary = self.tf.Summary(value=img_summaries)
-            # self.writer.add_summary(summary, step)
+    # Create and write Summary
+    # summary = self.tf.Summary(value=img_summaries)
+    # self.writer.add_summary(summary, step)
 
-        # if self.use_html: # save images to a html file
-        #     for label, image_numpy in visuals.items():
-        #         if isinstance(image_numpy, list):
-        #             for i in range(len(image_numpy)):
-        #                 img_path = os.path.join(self.img_dir, 'epoch%.3d_%s_%d.jpg' % (epoch, label, i))
-        #                 util.save_image(image_numpy[i], img_path)
-        #         else:
-        #             img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.jpg' % (epoch, label))
-        #             util.save_image(image_numpy, img_path)
+    # if self.use_html: # save images to a html file
+    #     for label, image_numpy in visuals.items():
+    #         if isinstance(image_numpy, list):
+    #             for i in range(len(image_numpy)):
+    #                 img_path = os.path.join(self.img_dir, 'epoch%.3d_%s_%d.jpg' % (epoch, label, i))
+    #                 util.save_image(image_numpy[i], img_path)
+    #         else:
+    #             img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.jpg' % (epoch, label))
+    #             util.save_image(image_numpy, img_path)
 
-            # update website
-            # webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=30)
-            # for n in range(epoch, 0, -1):
-            #     webpage.add_header('epoch [%d]' % n)
-            #     ims = []
-            #     txts = []
-            #     links = []
-            #
-            #     for label, image_numpy in visuals.items():
-            #         if isinstance(image_numpy, list):
-            #             for i in range(len(image_numpy)):
-            #                 img_path = 'epoch%.3d_%s_%d.jpg' % (n, label, i)
-            #                 ims.append(img_path)
-            #                 txts.append(label+str(i))
-            #                 links.append(img_path)
-            #         else:
-            #             img_path = 'epoch%.3d_%s.jpg' % (n, label)
-            #             ims.append(img_path)
-            #             txts.append(label)
-            #             links.append(img_path)
-            #     if len(ims) < 10:
-            #         webpage.add_images(ims, txts, links, width=self.win_size)
-            #     else:
-            #         num = int(round(len(ims)/2.0))
-            #         webpage.add_images(ims[:num], txts[:num], links[:num], width=self.win_size)
-            #         webpage.add_images(ims[num:], txts[num:], links[num:], width=self.win_size)
-            # webpage.save()
+    # update website
+    # webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=30)
+    # for n in range(epoch, 0, -1):
+    #     webpage.add_header('epoch [%d]' % n)
+    #     ims = []
+    #     txts = []
+    #     links = []
+    #
+    #     for label, image_numpy in visuals.items():
+    #         if isinstance(image_numpy, list):
+    #             for i in range(len(image_numpy)):
+    #                 img_path = 'epoch%.3d_%s_%d.jpg' % (n, label, i)
+    #                 ims.append(img_path)
+    #                 txts.append(label+str(i))
+    #                 links.append(img_path)
+    #         else:
+    #             img_path = 'epoch%.3d_%s.jpg' % (n, label)
+    #             ims.append(img_path)
+    #             txts.append(label)
+    #             links.append(img_path)
+    #     if len(ims) < 10:
+    #         webpage.add_images(ims, txts, links, width=self.win_size)
+    #     else:
+    #         num = int(round(len(ims)/2.0))
+    #         webpage.add_images(ims[:num], txts[:num], links[:num], width=self.win_size)
+    #         webpage.add_images(ims[num:], txts[num:], links[num:], width=self.win_size)
+    # webpage.save()
 
     # errors: dictionary of error labels and values
     # def plot_current_errors(self, errors, step):
@@ -123,21 +124,23 @@ class Visualizer():
 
             log_file.write('%s\n' % message)
 
-    def print_current_performance(self,fake_image,clean_image):
-        PSNR=calculate_psnr(fake_image,clean_image,0)
-        SSIM=calculate_ssim(fake_image,clean_image,0)
-        FID=calculate_fid_given_img(fake_image,clean_image)
-        LPIPS=LPIPS_class().forward(fake_image,clean_image)
+    def print_current_performance(self, Epoch, fake_image, clean_image):
+        PSNR = calculate_psnr(fake_image, clean_image, 0)
+        SSIM = calculate_ssim(fake_image, clean_image, 0)
+        FID = calculate_fid_given_img(fake_image, clean_image)
+        LPIPS = LPIPS_class().forward(fake_image, clean_image)
+        message = 'Epoch: %d || ---PSNR:%.3f ---SSIM:%.3f ---FID:%.3f ---LPIPS:%.3f' % (Epoch, PSNR, SSIM, FID, LPIPS)
+        print(message)
+        with open(self.log_name, "a") as log_file:
+            log_file.write('%s\n' % message)
+        return PSNR,SSIM,FID,LPIPS
 
-
-
-    def print_save(self,message):
+    def print_save(self, message):
 
         print(message)
 
-        with open(self.log_name,"a") as log_file:
-            log_file.write('%s\n'%message)
-
+        with open(self.log_name, "a") as log_file:
+            log_file.write('%s\n' % message)
 
     # save image to the disk
     def save_images(self, webpage, visuals, image_path):
