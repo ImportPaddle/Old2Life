@@ -88,6 +88,8 @@ save_delta = total_steps % opt.save_latest_freq
 if opt.isTrain and len(opt.gpu_ids) > 1:
     model = paddle.DataParallel(model)
 
+performance = util.compute_performance()
+
 for epoch in range(start_epoch, opt.niter + opt.niter_decay):
     epoch_s_t = datetime.datetime.now()
     epoch_start_time = time.time()
@@ -129,6 +131,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
         loss_D.backward()
         model.module.optimizer_D.step()
 
+        performance.update(generated,data['image'])
+
         ############## Display results and errors ##########
         ### print out errors
         if i == 0 or total_steps % opt.print_freq == print_delta:
@@ -139,7 +143,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
                                                 model.module.old_lr) if dist.get_rank() == 0 else None
             else:
                 visualizer.print_current_errors(epoch, epoch_iter, errors, t, model.module.old_lr)
-                visualizer.print_current_performance(epoch, generated[0], data['image'][0])
+                PSNR,SSIM,FID,LPIPS=performance.accumulate()
+                visualizer.print_current_performance(epoch, PSNR,SSIM,FID,LPIPS)
 
             # visualizer.plot_current_errors(errors, total_steps)
 
@@ -182,7 +187,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
         model.module.save('latest')
         model.module.save(epoch)
 
-        np.savetxt(iter_path, (epoch+1,0) , delimiter=',', fmt='%d')
+        np.savetxt(iter_path, (epoch + 1, 0), delimiter=',', fmt='%d')
 
     # instead of only training the local enhancer, train the entire network after certain iterations
     if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
@@ -191,5 +196,3 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
     # linearly decay learning rate after certain iterations
     if epoch > opt.niter:
         model.module.update_learning_rate()
-
-
