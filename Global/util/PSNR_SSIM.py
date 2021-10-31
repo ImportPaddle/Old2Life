@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 import paddle
 
+
 class PSNR(paddle.metric.Metric):
     def __init__(self, crop_border, input_order='HWC', test_y_channel=False):
         self.crop_border = crop_border
@@ -27,10 +28,10 @@ class PSNR(paddle.metric.Metric):
         self.results = []
 
     def update(self, preds, gts):
-        if not isinstance(preds, (list, tuple)):
+        if not isinstance(preds, (list, tuple, np.ndarray)):
             preds = [preds]
 
-        if not isinstance(gts, (list, tuple)):
+        if not isinstance(gts, (list, tuple, np.ndarray)):
             gts = [gts]
 
         for pred, gt in zip(preds, gts):
@@ -53,13 +54,12 @@ class PSNR(paddle.metric.Metric):
         return 'PSNR'
 
 
-
 class SSIM(PSNR):
     def update(self, preds, gts):
-        if not isinstance(preds, (list, tuple)):
+        if not isinstance(preds, (list, tuple, np.ndarray)):
             preds = [preds]
 
-        if not isinstance(gts, (list, tuple)):
+        if not isinstance(gts, (list, tuple, np.ndarray)):
             gts = [gts]
 
         for pred, gt in zip(preds, gts):
@@ -112,7 +112,7 @@ def calculate_psnr(img1,
         img1 = to_y_channel(img1)
         img2 = to_y_channel(img2)
 
-    mse = np.mean((img1 - img2)**2)
+    mse = np.mean((img1 - img2) ** 2)
     if mse == 0:
         return float('inf')
     return 20. * np.log10(255. / np.sqrt(mse))
@@ -131,8 +131,8 @@ def _ssim(img1, img2):
         float: ssim result.
     """
 
-    C1 = (0.01 * 255)**2
-    C2 = (0.03 * 255)**2
+    C1 = (0.01 * 255) ** 2
+    C2 = (0.03 * 255) ** 2
 
     img1 = img1.astype(np.float64)
     img2 = img2.astype(np.float64)
@@ -141,11 +141,11 @@ def _ssim(img1, img2):
 
     mu1 = cv2.filter2D(img1, -1, window)[5:-5, 5:-5]
     mu2 = cv2.filter2D(img2, -1, window)[5:-5, 5:-5]
-    mu1_sq = mu1**2
-    mu2_sq = mu2**2
+    mu1_sq = mu1 ** 2
+    mu2_sq = mu2 ** 2
     mu1_mu2 = mu1 * mu2
-    sigma1_sq = cv2.filter2D(img1**2, -1, window)[5:-5, 5:-5] - mu1_sq
-    sigma2_sq = cv2.filter2D(img2**2, -1, window)[5:-5, 5:-5] - mu2_sq
+    sigma1_sq = cv2.filter2D(img1 ** 2, -1, window)[5:-5, 5:-5] - mu1_sq
+    sigma2_sq = cv2.filter2D(img2 ** 2, -1, window)[5:-5, 5:-5] - mu2_sq
     sigma12 = cv2.filter2D(img1 * img2, -1, window)[5:-5, 5:-5] - mu1_mu2
 
     ssim_map = ((2 * mu1_mu2 + C1) *

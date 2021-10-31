@@ -37,14 +37,15 @@ inceptionV3 pretrain model is convert from pytorch, pretrain_model url is https:
 """
 INCEPTIONV3_WEIGHT_URL = "https://paddlegan.bj.bcebos.com/InceptionV3.pdparams"
 
-
 class FID(paddle.metric.Metric):
     def __init__(self,
                  batch_size=1,
+                 use_GPU=True,
                  dims=2048,
                  premodel_path=None,
                  model=None):
         self.batch_size = batch_size
+        self.use_GPU = use_GPU
         self.dims = dims
         self.premodel_path = premodel_path
         if model is None:
@@ -65,7 +66,7 @@ class FID(paddle.metric.Metric):
 
     def update(self, preds, gts):
         preds_inception, gts_inception = calculate_inception_val(
-            preds, gts, self.batch_size, self.model,  self.dims)
+            preds, gts, self.batch_size, self.model, self.use_GPU, self.dims)
         self.preds.append(preds_inception)
         self.gts.append(gts_inception)
 
@@ -113,7 +114,7 @@ def _calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
             2 * tr_covmean)
 
 
-def _get_activations_from_ims(img, model, batch_size, dims):
+def _get_activations_from_ims(img, model, batch_size, dims, use_gpu):
     n_batches = (len(img) + batch_size - 1) // batch_size
     n_used_img = len(img)
 
@@ -130,7 +131,7 @@ def _get_activations_from_ims(img, model, batch_size, dims):
 
         images = paddle.to_tensor(images)
         pred = model(images)[0][0]
-        pred_arr[start:end] = pred.reshape([end - start, -1]).numpy()
+        pred_arr[start:end] = paddle.reshape(pred,[end - start, -1]).numpy()
     return pred_arr
 
 
@@ -144,13 +145,17 @@ def calculate_inception_val(img_fake,
                             img_real,
                             batch_size,
                             model,
+                            use_gpu=True,
                             dims=2048):
-    act_fake = _get_activations_from_ims(img_fake, model, batch_size, dims)
-    act_real = _get_activations_from_ims(img_real, model, batch_size, dims)
+    act_fake = _get_activations_from_ims(img_fake, model, batch_size, dims,
+                                         use_gpu)
+    act_real = _get_activations_from_ims(img_real, model, batch_size, dims,
+                                         use_gpu)
     return act_fake, act_real
 
 
 def calculate_fid_given_img(act_fake, act_real):
+
     m1, s1 = _compute_statistic_of_img(act_fake)
     m2, s2 = _compute_statistic_of_img(act_real)
     fid_value = _calculate_frechet_distance(m1, s1, m2, s2)
@@ -161,6 +166,7 @@ def _get_activations(files,
                      model,
                      batch_size,
                      dims,
+                     use_gpu,
                      premodel_path,
                      style=None):
     if len(files) % batch_size != 0:
@@ -240,8 +246,9 @@ def _calculate_activation_statistics(files,
                                      premodel_path,
                                      batch_size=50,
                                      dims=2048,
+                                     use_gpu=False,
                                      style=None):
-    act = _get_activations(files, model, batch_size, dims,
+    act = _get_activations(files, model, batch_size, dims, use_gpu,
                            premodel_path, style)
     mu = np.mean(act, axis=0)
     sigma = np.cov(act, rowvar=False)
@@ -252,6 +259,7 @@ def _compute_statistics_of_path(path,
                                 model,
                                 batch_size,
                                 dims,
+                                use_gpu,
                                 premodel_path,
                                 style=None):
     if path.endswith('.npz'):
@@ -265,7 +273,7 @@ def _compute_statistics_of_path(path,
                     filenames, '*.jpg') or fnmatch.filter(filenames, '*.png'):
                 files.append(os.path.join(root, filename))
         m, s = _calculate_activation_statistics(files, model, premodel_path,
-                                                batch_size, dims,
+                                                batch_size, dims, use_gpu,
                                                 style)
     return m, s
 
@@ -273,6 +281,7 @@ def _compute_statistics_of_path(path,
 def calculate_fid_given_paths(paths,
                               premodel_path,
                               batch_size,
+                              use_gpu,
                               dims,
                               model=None,
                               style=None):
@@ -289,8 +298,10 @@ def calculate_fid_given_paths(paths,
             block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
             model = InceptionV3([block_idx], class_dim=1008)
 
-    m1, s1 = _compute_statistics_of_path(paths[0], model, batch_size, dims,premodel_path, style)
-    m2, s2 = _compute_statistics_of_path(paths[1], model, batch_size, dims,premodel_path, style)
+    m1, s1 = _compute_statistics_of_path(paths[0], model, batch_size, dims,
+                                         use_gpu, premodel_path, style)
+    m2, s2 = _compute_statistics_of_path(paths[1], model, batch_size, dims,
+                                         use_gpu, premodel_path, style)
 
     fid_value = _calculate_frechet_distance(m1, s1, m2, s2)
     return fid_value

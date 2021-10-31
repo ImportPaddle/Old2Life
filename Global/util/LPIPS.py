@@ -66,10 +66,10 @@ class LPIPSMetric(paddle.metric.Metric):
         self.results = []
 
     def update(self, preds, gts):
-        if not isinstance(preds, (list, tuple)):
+        if not isinstance(preds, (list, tuple, np.ndarray)):
             preds = [preds]
 
-        if not isinstance(gts, (list, tuple)):
+        if not isinstance(gts, (list, tuple, np.ndarray)):
             gts = [gts]
 
         for pred, gt in zip(preds, gts):
@@ -242,16 +242,15 @@ class LPIPS(nn.Layer):
         else:
             return val
 
-
 class ScalingLayer(nn.Layer):
     def __init__(self):
         super(ScalingLayer, self).__init__()
         self.register_buffer(
             'shift',
-            paddle.to_tensor([-.030, -.088, -.188]).reshape([1, 3, 1, 1]))
+            paddle.reshape(paddle.to_tensor([-.030, -.088, -.188]),([1, 3, 1, 1])))
         self.register_buffer(
             'scale',
-            paddle.to_tensor([.458, .448, .450]).reshape([1, 3, 1, 1]))
+            paddle.reshape(paddle.to_tensor([.458, .448, .450]), ([1, 3, 1, 1])))
 
     def forward(self, inp):
         return (inp - self.shift) / self.scale

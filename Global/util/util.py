@@ -29,13 +29,13 @@ class compute_performance():
 
     def update(self,preds,gts):
         preds = paddle.clip((preds + 1) * 127.5 + 0.5, 0, 255).transpose(
-            [1, 2, 0]).cast("uint8").numpy()
+            [0,2, 3, 1]).cast("uint8").numpy()
         gts = paddle.clip((gts + 1) * 127.5 + 0.5, 0, 255).transpose(
-            [1, 2, 0]).cast("uint8").numpy()
+            [0, 2,3, 1]).cast("uint8").numpy()
         self.PSNR.update(preds,gts)
         self.SSIM.update(preds,gts)
         self.FID.update(preds,gts)
-        self.LPIPS.updata(preds,gts)
+        self.LPIPS.update(preds,gts)
 
     def accumulate(self):
         PSNR=self.PSNR.accumulate()
