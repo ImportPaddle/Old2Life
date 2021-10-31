@@ -7,12 +7,11 @@ import ntpath
 import time
 from . import util
 import paddle.distributed as dist
+import paddle
 # from . import html
 import scipy.misc
 from PIL import Image
-from .PSNR_SSIM import calculate_psnr, calculate_ssim
-from .LPIPS import LPIPS as LPIPS_class
-from .FID import calculate_fid_given_img
+from .FID import FID as FID_class
 
 try:
     from StringIO import StringIO  # Python 2.7
@@ -124,18 +123,11 @@ class Visualizer():
 
             log_file.write('%s\n' % message)
 
-    def print_current_performance(self, Epoch, fake_tensor, clean_tensor):
-        fake_image=Image.fromarray(np.array(fake_tensor))
-        clean_image=Image.fromarray(np.array(clean_tensor))
-        PSNR = calculate_psnr(fake_image, clean_image, 0)
-        SSIM = calculate_ssim(fake_image, clean_image, 0)
-        FID = calculate_fid_given_img(fake_image, clean_image)
-        LPIPS = LPIPS_class().forward(fake_image, clean_image)
+    def print_current_performance(self, Epoch, PSNR, SSIM, FID, LPIPS):
         message = 'Epoch: %d || ---PSNR:%.3f ---SSIM:%.3f ---FID:%.3f ---LPIPS:%.3f' % (Epoch, PSNR, SSIM, FID, LPIPS)
         print(message)
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)
-        return PSNR,SSIM,FID,LPIPS
 
     def print_save(self, message):
 
