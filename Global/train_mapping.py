@@ -10,9 +10,6 @@ import util.util as util
 from util.visualizer import Visualizer
 import os
 import numpy as np
-# import torch
-# import torchvision.utils as vutils
-# from torch.autograd import PyLayer
 
 import paddle
 import torchvision_paddle.utils as vutils
@@ -89,6 +86,7 @@ if opt.isTrain and len(opt.gpu_ids) > 1:
     model = paddle.DataParallel(model)
 
 performance = util.compute_performance()
+Save=util.IsSave(border=2)
 
 for epoch in range(start_epoch, opt.niter + opt.niter_decay):
     epoch_s_t = datetime.datetime.now()
@@ -131,8 +129,6 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
         loss_D.backward()
         model.module.optimizer_D.step()
 
-        performance.update(generated,data['image'])
-
         ############## Display results and errors ##########
         ### print out errors
         if i == 0 or total_steps % opt.print_freq == print_delta:
@@ -143,51 +139,55 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
                                                 model.module.old_lr) if dist.get_rank() == 0 else None
             else:
                 visualizer.print_current_errors(epoch, epoch_iter, errors, t, model.module.old_lr)
-                PSNR,SSIM,FID,LPIPS=performance.accumulate()
-                visualizer.print_current_performance(epoch, PSNR,SSIM,FID,LPIPS)
-
+        performance.update(generated[:5], data['image'][:5])
             # visualizer.plot_current_errors(errors, total_steps)
 
         ### display output images
-        if save_fake:
-
-            if not os.path.exists(opt.outputs_dir + opt.name):
-                os.makedirs(opt.outputs_dir + opt.name)
-
-            imgs_num = 5
-            if opt.NL_use_mask:
-                mask = data['inst'][:imgs_num]
-                mask = mask.repeat(1, 3, 1, 1)
-                imgs = paddle.concat(
-                    (data['label'][:imgs_num], mask, generated[:imgs_num], data['image'][:imgs_num]), 0)
-            else:
-                imgs = paddle.concat(
-                    (data['label'][:imgs_num], generated[:imgs_num], data['image'][:imgs_num]), 0)
-
-            imgs = (imgs + 1.) / 2.0  ## de-normalize
-
-            try:
-                vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
-                    total_steps) + '.png', nrow=imgs_num, padding=0, normalize=True)
-            except OSError as err:
-                print(err)
-
-        if epoch_iter >= dataset_size:
-            break
-
+        # if save_fake:
+        #
+        #     if not os.path.exists(opt.outputs_dir + opt.name):
+        #         os.makedirs(opt.outputs_dir + opt.name)
+        #
+        #     imgs_num = 5
+        #     if opt.NL_use_mask:
+        #         mask = data['inst'][:imgs_num]
+        #         mask = mask.repeat(1, 3, 1, 1)
+        #         imgs = paddle.concat(
+        #             (data['label'][:imgs_num], mask, generated[:imgs_num], data['image'][:imgs_num]), 0)
+        #     else:
+        #         imgs = paddle.concat(
+        #             (data['label'][:imgs_num], generated[:imgs_num], data['image'][:imgs_num]), 0)
+        #
+        #     imgs = (imgs + 1.) / 2.0  ## de-normalize
+        #
+        #     try:
+        #         vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
+        #             total_steps) + '.png', nrow=imgs_num, padding=0, normalize=True)
+        #     except OSError as err:
+        #         print(err)
+        #
+        # if epoch_iter >= dataset_size:
+        #     break
+    PSNR, SSIM, FID, LPIPS = performance.accumulate()
+    performance.reset()
+    visualizer.print_current_performance(epoch, PSNR, SSIM, FID, LPIPS)
     # end of epoch
     epoch_e_t = datetime.datetime.now()
     iter_end_time = time.time()
-    print('End of epoch %d / %d \t Time Taken: %s' %
+    # print('End of epoch %d / %d \t Time Taken: %s' %
+    #       (epoch, opt.niter + opt.niter_decay, str(epoch_e_t - epoch_s_t)))
+    Visualizer.print_log('End of epoch %d / %d \t Time Taken: %s' %
           (epoch, opt.niter + opt.niter_decay, str(epoch_e_t - epoch_s_t)))
 
     # save model for this epoch
     if epoch % opt.save_epoch_freq == 0:
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
         model.module.save('latest')
-        model.module.save(epoch)
-
         np.savetxt(iter_path, (epoch + 1, 0), delimiter=',', fmt='%d')
+    if Save.is_save(PSNR, SSIM, FID, LPIPS):
+        model.module.save('best')
+        print(f'Epoch:{epoch} || Successfully saved the best model so far.')
+        Visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
 
     # instead of only training the local enhancer, train the entire network after certain iterations
     if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):

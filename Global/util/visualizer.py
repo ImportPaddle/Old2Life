@@ -10,18 +10,17 @@ import paddle.distributed as dist
 import paddle
 # from . import html
 import scipy.misc
-from PIL import Image
-from .FID import FID as FID_class
+import logging
 
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
     from io import BytesIO  # Python 3.x
 
-
 class Visualizer():
     def __init__(self, opt):
         # self.opt = opt
+        self.logger = logging.getLogger()
         self.tf_log = opt.tf_log
         self.use_html = opt.isTrain and not opt.no_html
         self.win_size = opt.display_winsize
@@ -35,7 +34,7 @@ class Visualizer():
         if self.use_html:
             self.web_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web')
             self.img_dir = os.path.join(self.web_dir, 'images')
-            print('create web directory %s...' % self.web_dir)
+            # print('create web directory %s...' % self.web_dir)
             util.mkdirs([self.web_dir, self.img_dir])
         self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
         with open(self.log_name, "a") as log_file:
@@ -43,8 +42,12 @@ class Visualizer():
             if opt.isTrain and len(opt.gpu_ids) > 1:
                 log_file.write(
                     f'================ Training {opt.name} Loss (%s) ================\n' % now) if dist.get_rank() == 0 else None
+                self.logger.info(
+                    f'================ Training {opt.name} Loss (%s) ================\n' % now) if dist.get_rank() == 0 else None
             else:
                 log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now)
+                self.logger.info(
+                    f'================ Training {opt.name} Loss (%s) ================\n' % now)
 
     # |visuals|: dictionary of images to display or save
     # def display_current_results(self, visuals, epoch, step):
@@ -111,29 +114,31 @@ class Visualizer():
     #             summary = self.tf.Summary(value=[self.tf.Summary.Value(tag=tag, simple_value=value)])
     #             self.writer.add_summary(summary, step)
 
+    def print_log(self,message):
+        self.logger.info(message)
+
     # errors: same format as |errors| of plotCurrentErrors
     def print_current_errors(self, epoch, i, errors, t, lr):
         message = 'Epoch: %d, Iters: %d, Time: %.3f lr: %.5f || ' % (epoch, i, t, lr)
         for k, v in errors.items():
             if v != 0:
                 message += '%s: %.3f ' % (k, v)
-
-        print(message)
+        # print(message)
         with open(self.log_name, "a") as log_file:
-
+            self.logger.info( message)
             log_file.write('%s\n' % message)
 
     def print_current_performance(self, Epoch, PSNR, SSIM, FID, LPIPS):
         message = 'Epoch: %d || ---PSNR:%.3f ---SSIM:%.3f ---FID:%.3f ---LPIPS:%.3f' % (Epoch, PSNR, SSIM, FID, LPIPS)
-        print(message)
+        # print(message)
         with open(self.log_name, "a") as log_file:
+            self.logger.info(message)
             log_file.write('%s\n' % message)
 
     def print_save(self, message):
-
-        print(message)
-
+        # print(message)
         with open(self.log_name, "a") as log_file:
+            self.logger.info(message)
             log_file.write('%s\n' % message)
 
     # save image to the disk

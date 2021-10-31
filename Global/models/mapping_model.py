@@ -131,7 +131,6 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
         if opt.load_pretrain != "":
             self.load_network(self.mapping_net, "mapping_net", opt.which_epoch, opt.load_pretrain)
-
         if not opt.no_load_VAE:
 
             self.load_network(self.netG_A, "G", opt.use_vae_which_epoch, opt.load_pretrainA)

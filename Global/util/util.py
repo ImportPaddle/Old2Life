@@ -14,10 +14,43 @@ from .LPIPS import LPIPSMetric as LPIPS
 import paddle
 import paddle.nn as nn
 
+class IsSave():
+    def __init__(self,border=2):
+        self.border=border
+        self.PSNR=float('-inf')
+        self.SSIM=float('-inf')
+        self.FID=float('inf')
+        self.LPIPS=float('inf')
+
+    def initial(self):
+        self.PSNR = float('-inf')
+        self.SSIM = float('-inf')
+        self.FID = float('inf')
+        self.LPIPS = float('inf')
+
+    def is_save(self,PSNR,SSIM,FID,LPIPS):
+        num=0
+        if self.PSNR>=PSNR:
+            num+=1
+        if self.SSIM>=SSIM:
+            num+=1
+        if FID<=self.FID:
+            num+=1
+        if LPIPS<=self.LPIPS:
+            num+=1
+        if num>=self.border:
+            self.PSNR=PSNR
+            self.SSIM=SSIM
+            self.FID=FID
+            self.LPIPS=LPIPS
+            return True
+        else:
+            return False
+
 class compute_performance():
-    def __init__(self):
-        self.PSNR=PSNR(crop_border=0)
-        self.SSIM=SSIM(crop_border=0)
+    def __init__(self,crop_border=0):
+        self.PSNR=PSNR(crop_border=crop_border)
+        self.SSIM=SSIM(crop_border=crop_border)
         self.FID=FID()
         self.LPIPS=LPIPS()
 
