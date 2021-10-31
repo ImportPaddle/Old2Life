@@ -160,7 +160,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
     if Save.is_save(PSNR, SSIM, FID, LPIPS):
         model.module.save('best')
         print(f'Epoch:{epoch} || Successfully saved the best model so far.')
-        Visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
+        visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
 
     ### instead of only training the local enhancer, train the entire network after certain iterations
     if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):

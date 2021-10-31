@@ -176,8 +176,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
     iter_end_time = time.time()
     # print('End of epoch %d / %d \t Time Taken: %s' %
     #       (epoch, opt.niter + opt.niter_decay, str(epoch_e_t - epoch_s_t)))
-    Visualizer.print_log('End of epoch %d / %d \t Time Taken: %s' %
-          (epoch, opt.niter + opt.niter_decay, str(epoch_e_t - epoch_s_t)))
+    visualizer.print_log('End of epoch %d / %d \t Time Taken: %s' %(epoch, opt.niter + opt.niter_decay, str(epoch_e_t - epoch_s_t)))
 
     # save model for this epoch
     if epoch % opt.save_epoch_freq == 0:
@@ -186,8 +185,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
         np.savetxt(iter_path, (epoch + 1, 0), delimiter=',', fmt='%d')
     if Save.is_save(PSNR, SSIM, FID, LPIPS):
         model.module.save('best')
-        print(f'Epoch:{epoch} || Successfully saved the best model so far.')
-        Visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
+        # print(f'Epoch:{epoch} || Successfully saved the best model so far.')
+        visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
 
     # instead of only training the local enhancer, train the entire network after certain iterations
     if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):

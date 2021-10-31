@@ -17,6 +17,7 @@ try:
 except ImportError:
     from io import BytesIO  # Python 3.x
 
+
 class Visualizer():
     def __init__(self, opt):
         # self.opt = opt
@@ -46,8 +47,7 @@ class Visualizer():
                     f'================ Training {opt.name} Loss (%s) ================\n' % now) if dist.get_rank() == 0 else None
             else:
                 log_file.write(f'================ Training {opt.name} Loss (%s) ================\n' % now)
-                self.logger.info(
-                    f'================ Training {opt.name} Loss (%s) ================\n' % now)
+                self.logger.info(f'================ Training {opt.name} Loss (%s) ================\n' % now)
 
     # |visuals|: dictionary of images to display or save
     # def display_current_results(self, visuals, epoch, step):
@@ -114,7 +114,7 @@ class Visualizer():
     #             summary = self.tf.Summary(value=[self.tf.Summary.Value(tag=tag, simple_value=value)])
     #             self.writer.add_summary(summary, step)
 
-    def print_log(self,message):
+    def print_log(self, message):
         self.logger.info(message)
 
     # errors: same format as |errors| of plotCurrentErrors
@@ -125,7 +125,7 @@ class Visualizer():
                 message += '%s: %.3f ' % (k, v)
         # print(message)
         with open(self.log_name, "a") as log_file:
-            self.logger.info( message)
+            self.logger.info(message)
             log_file.write('%s\n' % message)
 
     def print_current_performance(self, Epoch, PSNR, SSIM, FID, LPIPS):
