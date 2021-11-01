@@ -89,6 +89,10 @@ performance = util.compute_performance()
 Save=util.IsSave(border=2)
 
 for epoch in range(start_epoch, opt.niter + opt.niter_decay):
+    # linearly decay learning rate after certain iterations
+    if dist.get_rank() == 0:
+        if epoch > opt.niter:
+            model.module.update_learning_rate()
     epoch_s_t = datetime.datetime.now()
     epoch_start_time = time.time()
     if epoch != start_epoch:
@@ -188,8 +192,3 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
             model.module.save('best')
             # print(f'Epoch:{epoch} || Successfully saved the best model so far.')
             visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
-
-
-        # linearly decay learning rate after certain iterations
-        if epoch > opt.niter:
-            model.module.update_learning_rate()

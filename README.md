@@ -13,7 +13,7 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 |:---:|:---:|:---:|:---:|:---:|
 | Target| 23.33| 0.69 | 134.35 | 0.25 |
 |stage_A/Epoch(9) | 22.230 | 0.683 | 67.703 | 0.377 |
-|stage_B/Epoch(12) | 23.122 | 0.797 | 33.248 | 0.233 |
+|stage_B/Epoch(13) | 23.610 | 0.808 | 30.821 | 0.221 |
 |stage_Map/Epoch(20/A:20,B:20) |    |    |    |    |
 
 <img src='imgs/0001.jpg'/>

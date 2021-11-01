@@ -66,6 +66,11 @@ Save=util.IsSave(border=2)
 
 for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
 
+    # linearly decay learning rate after certain iterations
+    if dist.get_rank() == 0:
+        if epoch > opt.niter:
+            model.module.update_learning_rate()
+
     epoch_start_time = time.time()
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
@@ -165,6 +170,3 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
         if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
             model.module.update_fixed_params()
 
-        ### linearly decay learning rate after certain iterations
-        if epoch > opt.niter:
-            model.module.update_learning_rate()

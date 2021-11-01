@@ -67,6 +67,12 @@ performance = util.compute_performance()
 Save=util.IsSave(border=2)
 
 for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
+
+    # linearly decay learning rate after certain iterations
+    if dist.get_rank() == 0:
+        if epoch > opt.niter:
+            model.module.update_learning_rate()
+
     epoch_start_time = time.time()
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
