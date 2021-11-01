@@ -101,8 +101,7 @@ class Pix2PixHDModel(BaseModel):
             if opt.continue_train:
                 self.load_optimizer(self.optimizer_D, 'D', opt.which_epoch)
                 self.load_optimizer(self.optimizer_G, "G", opt.which_epoch)
-                for param_groups in self.optimizer_D._parameter_list:
-                    self.old_lr=param_groups['lr']
+                self.old_lr = self.optimizer_D.get_lr()
 
                 print("---------- Optimizers reloaded -------------")
                 print("---------- Current LR is %.8f -------------"%(self.old_lr))

@@ -20,7 +20,7 @@ python Global/train_mapping.py \
 --which_epoch latest \
 --load_pretrainA /home/aistudio/work/Old2Life/checkpoints/domainA_SR_old_photos \
 --load_pretrainB /home/aistudio/work/Old2Life/checkpoints/domainB_old_photos \
---dataroot /home/aistudio/work/Old2Life/old \
+--dataroot /home/aistudio/work/Old2Life/test_old \
 --outputs_dir /home/aistudio/work/Old2Life/output/ \
 --checkpoints_dir /home/aistudio/work/Old2Life/checkpoints \
 --niter 15 \
