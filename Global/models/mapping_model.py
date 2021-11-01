@@ -142,6 +142,11 @@ class Pix2PixHDModel_Mapping(BaseModel):
             self.netG_A.eval()
             self.netG_B.eval()
 
+        if opt.isTrain and len(opt.gpu_ids) > 1:
+            self.netG_A = paddle.DataParallel(self.netG_A)
+            self.netG_B = paddle.DataParallel(self.netG_B)
+            self.mapping_net = paddle.DataParallel(self.mapping_net)
+
         # if opt.gpu_ids:
         #     self.netG_A.cuda(opt.gpu_ids[0])
         #     self.netG_B.cuda(opt.gpu_ids[0])

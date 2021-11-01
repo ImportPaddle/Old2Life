@@ -61,9 +61,6 @@ display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 
-if opt.isTrain and len(opt.gpu_ids) > 1:
-    model = paddle.DataParallel(model)
-
 performance = util.compute_performance()
 Save=util.IsSave(border=2)
 
@@ -131,7 +128,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
 
             if not os.path.exists(opt.outputs_dir + opt.name):
                 os.makedirs(opt.outputs_dir + opt.name)
-            imgs_num = data['label'].shape[0]
+            imgs_num = 5
             imgs = paddle.concat((data['label'], generated, data['image']), 0)
 
             imgs = (imgs + 1.) / 2.0

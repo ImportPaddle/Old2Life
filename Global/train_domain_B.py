@@ -63,9 +63,6 @@ display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 
-if opt.isTrain and len(opt.gpu_ids) > 1:
-    model = paddle.DataParallel(model)
-
 performance = util.compute_performance()
 Save=util.IsSave(border=2)
 

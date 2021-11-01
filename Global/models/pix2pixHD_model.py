@@ -61,9 +61,12 @@ class Pix2PixHDModel(BaseModel):
                 self.load_network(self.netD, 'D', opt.which_epoch, pretrained_path)
                 print("---------- D Networks reloaded -------------")
 
-
             if self.gen_features:
-                self.load_network(self.netE, 'E', opt.which_epoch, pretrained_path)              
+                self.load_network(self.netE, 'E', opt.which_epoch, pretrained_path)
+
+        if opt.isTrain and len(opt.gpu_ids) > 1:
+            self.netD = paddle.DataParallel(self.netD)
+            self.netG = paddle.DataParallel(self.netG)
 
         # set loss functions and optimizers
         if self.isTrain:
