@@ -123,25 +123,25 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
             # visualizer.plot_current_errors(errors, total_steps)
 
         # ### display output images
-        # if save_fake:
-        #
-        #     if not os.path.exists(opt.outputs_dir + opt.name):
-        #         os.makedirs(opt.outputs_dir + opt.name)
-        #     imgs_num = 5
-        #     imgs = paddle.concat((data['label'][:imgs_num], generated[:imgs_num], data['image'][:imgs_num]),
-        #                          0)
-        #
-        #     imgs = (imgs + 1.) / 2.0
-        #
-        #     try:
-        #         image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
-        #             total_steps) + '.png',
-        #                                        nrow=imgs_num, padding=0, normalize=True)
-        #     except OSError as err:
-        #         print(err)
-        #
-        # if epoch_iter >= dataset_size:
-        #     break
+        if save_fake:
+
+            if not os.path.exists(opt.outputs_dir + opt.name):
+                os.makedirs(opt.outputs_dir + opt.name)
+            imgs_num = 5
+            imgs = paddle.concat((data['label'][:imgs_num], generated[:imgs_num], data['image'][:imgs_num]),
+                                 0)
+
+            imgs = (imgs + 1.) / 2.0
+
+            try:
+                image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
+                    total_steps) + '.png',
+                                               nrow=imgs_num, padding=0, normalize=True)
+            except OSError as err:
+                print(err)
+
+        if epoch_iter >= dataset_size:
+            break
         performance.update(generated[:5], data['image'][:5]) if dist.get_rank()==0 else None
     if dist.get_rank() == 0 :
         PSNR, SSIM, FID, LPIPS = performance.accumulate()

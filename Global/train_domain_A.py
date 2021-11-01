@@ -127,20 +127,20 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
             # visualizer.plot_current_errors(errors, total_steps)
 
         ### display output images
-        # if save_fake:
-        #
-        #     if not os.path.exists(opt.outputs_dir + opt.name):
-        #         os.makedirs(opt.outputs_dir + opt.name)
-        #     imgs_num = data['label'].shape[0]
-        #     imgs = paddle.concat((data['label'], generated, data['image']), 0)
-        #
-        #     imgs = (imgs + 1.) / 2.0
-        #
-        #     image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
-        #         total_steps) + '.png', nrow=imgs_num, padding=0, normalize=True)
-        #
-        # if epoch_iter >= dataset_size:
-        #     break
+        if save_fake:
+
+            if not os.path.exists(opt.outputs_dir + opt.name):
+                os.makedirs(opt.outputs_dir + opt.name)
+            imgs_num = data['label'].shape[0]
+            imgs = paddle.concat((data['label'], generated, data['image']), 0)
+
+            imgs = (imgs + 1.) / 2.0
+
+            image_grid = vutils.save_image(imgs, opt.outputs_dir + opt.name + '/' + str(epoch) + '_' + str(
+                total_steps) + '.png', nrow=imgs_num, padding=0, normalize=True)
+
+        if epoch_iter >= dataset_size:
+            break
         performance.update(generated[:5], data['image'][:5]) if dist.get_rank()==0 else None
     if dist.get_rank() == 0 :
 
