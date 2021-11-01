@@ -17,6 +17,7 @@ python Global/train_domain_A.py \
 --k_size 4 --use_v2 --mc 64 --start_r 1 --kl 1 --no_cgan \
 --dataroot /home/aistudio/work/Old2Life/test_old \
 --outputs_dir /home/aistudio/work/Old2Life/output/ \
---checkpoints_dir /home/aistudio/work/Old2Life/test_checkpoints \
+--checkpoints_dir /home/aistudio/work/Old2Life/checkpoints \
 --niter 15 \
---niter_decay 15
+--niter_decay 15 \
+--continue_train

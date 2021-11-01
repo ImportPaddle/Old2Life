@@ -19,11 +19,12 @@ python Global/train_mapping.py \
 --niter 150 --niter_decay 100 \
 --use_vae_which_epoch latest \
 --which_opech latest \
---load_pretrainA /home/aistudio/work/Old2Life/test_checkpoints/domainA_SR_old_photos \
---load_pretrainB /home/aistudio/work/Old2Life/test_checkpoints/domainB_old_photos \
---dataroot /home/aistudio/work/Old2Life/test_old \
+--load_pretrainA /home/aistudio/work/Old2Life/checkpoints/domainA_SR_old_photos \
+--load_pretrainB /home/aistudio/work/Old2Life/checkpoints/domainB_old_photos \
+--dataroot /home/aistudio/work/Old2Life/old \
 --outputs_dir /home/aistudio/work/Old2Life/output/ \
---checkpoints_dir /home/aistudio/work/Old2Life/test_checkpoints \
+--checkpoints_dir /home/aistudio/work/Old2Life/checkpoints \
 --niter 15 \
---niter_decay 15
+--niter_decay 15 \
+--continue_train
 
