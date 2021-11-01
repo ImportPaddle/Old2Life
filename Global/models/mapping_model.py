@@ -383,25 +383,19 @@ class Pix2PixHDModel_Mapping(BaseModel):
         fake_image = self.netG_B.forward(label_feat_map, flow="dec")
         return fake_image
 
-    def update_fixed_params(self):
-
-        params = list(self.netG.parameters())
-        if self.gen_features:
-            params += list(self.netE.parameters())
-        self.optimizer_G = paddle.optimizer.Adam(parameters=params, learning_rate=self.opt.lr, beta1=self.opt.beta1,
-                                                 beta2=0.999)
-        if self.opt.verbose:
-            print('------------ Now also finetuning global generator -----------')
 
     def update_learning_rate(self):
         lrd = self.opt.lr / self.opt.niter_decay
         lr = self.old_lr - lrd
-        for param_group in self.optimizer_D._parameter_list:
-            param_group['lr'] = lr
-        for param_group in self.optimizer_G._parameter_list:
-            param_group['lr'] = lr
-        for param_group in self.optimizer_featD._parameter_list:
-            param_group['lr'] = lr
+        self.optimizer_G.set_lr(lr)
+        self.optimizer_D.set_lr(lr)
+        self.optimizer_mapping.set_lr(lr)
+        # for param_group in self.optimizer_D._parameter_list:
+        #     param_group['lr'] = lr
+        # for param_group in self.optimizer_G._parameter_list:
+        #     param_group['lr'] = lr
+        # for param_group in self.optimizer_featD._parameter_list:
+        #     param_group['lr'] = lr
         if self.opt.verbose:
             print('update learning rate: %f -> %f' % (self.old_lr, lr))
         self.old_lr = lr

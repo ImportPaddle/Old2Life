@@ -189,9 +189,6 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay):
             # print(f'Epoch:{epoch} || Successfully saved the best model so far.')
             visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
 
-        # instead of only training the local enhancer, train the entire network after certain iterations
-        if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
-            model.module.update_fixed_params()
 
         # linearly decay learning rate after certain iterations
         if epoch > opt.niter:
