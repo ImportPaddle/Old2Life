@@ -85,7 +85,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
         losses, generated = model(paddle.to_tensor(data['label'], stop_gradient=False),
                                   paddle.to_tensor(data['inst'], stop_gradient=False),
                                   paddle.to_tensor(data['image'], stop_gradient=False),
-                                  paddle.to_tensor(data['feat'], stop_gradient=False), infer=save_fake)
+                                  paddle.to_tensor(data['feat'], stop_gradient=False), infer=True)
 
         # sum per device losses
         losses = [paddle.mean(x) if not isinstance(x, int) else x for x in losses]
@@ -141,31 +141,33 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay ):
         #
         # if epoch_iter >= dataset_size:
         #     break
-        performance.update(generated[:5], data['image'][:5])
-    PSNR, SSIM, FID, LPIPS = performance.accumulate()
-    performance.reset()
-    visualizer.print_current_performance(epoch, PSNR, SSIM, FID, LPIPS)
-    # end of epoch
-    iter_end_time = time.time()
-    print('End of epoch %d / %d \t Time Taken: %d sec' %
-          (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
+        performance.update(generated[:5], data['image'][:5]) if dist.get_rank()==0 else None
+    if dist.get_rank() == 0 :
 
-    ### save model for this epoch
-    if epoch % opt.save_epoch_freq == 0:
-        print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
-        model.module.save('latest')
-        # model.module.save(epoch)
-        np.savetxt(iter_path, (epoch + 1, 0), delimiter=',', fmt='%d')
+        PSNR, SSIM, FID, LPIPS = performance.accumulate()
+        performance.reset()
+        visualizer.print_current_performance(epoch, PSNR, SSIM, FID, LPIPS)
+        # end of epoch
+        iter_end_time = time.time()
+        print('End of epoch %d / %d \t Time Taken: %d sec' %
+              (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
 
-    if Save.is_save(PSNR, SSIM, FID, LPIPS):
-        model.module.save('best')
-        print(f'Epoch:{epoch} || Successfully saved the best model so far.')
-        visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
+        ### save model for this epoch
+        if epoch % opt.save_epoch_freq == 0:
+            print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
+            model.module.save('latest')
+            # model.module.save(epoch)
+            np.savetxt(iter_path, (epoch + 1, 0), delimiter=',', fmt='%d')
 
-    ### instead of only training the local enhancer, train the entire network after certain iterations
-    if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
-        model.module.update_fixed_params()
+        if Save.is_save(PSNR, SSIM, FID, LPIPS):
+            model.module.save('best')
+            print(f'Epoch:{epoch} || Successfully saved the best model so far.')
+            visualizer.print_log(f'Epoch:{epoch} || Successfully saved the best model so far.')
 
-    ### linearly decay learning rate after certain iterations
-    if epoch > opt.niter:
-        model.module.update_learning_rate()
+        ### instead of only training the local enhancer, train the entire network after certain iterations
+        if (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
+            model.module.update_fixed_params()
+
+        ### linearly decay learning rate after certain iterations
+        if epoch > opt.niter:
+            model.module.update_learning_rate()

@@ -17,6 +17,8 @@ python Global/train_mapping.py \
 --start_r 1 --mapping_n_block 6 \
 --map_mc 512 --use_l1_feat \
 --niter 150 --niter_decay 100 \
+--use_vae_which_epoch latest \
+--which_opech latest \
 --load_pretrainA /home/aistudio/work/Old2Life/test_checkpoints/domainA_SR_old_photos \
 --load_pretrainB /home/aistudio/work/Old2Life/test_checkpoints/domainB_old_photos \
 --dataroot /home/aistudio/work/Old2Life/test_old \

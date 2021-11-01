@@ -12,6 +12,10 @@ import paddle
 import scipy.misc
 import logging
 
+logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",level=logging.INFO)
+
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
