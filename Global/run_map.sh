@@ -24,5 +24,6 @@ python Global/train_mapping.py \
 --dataroot /home/aistudio/work/Old2Life/test_old \
 --outputs_dir /home/aistudio/work/Old2Life/output/ \
 --checkpoints_dir /home/aistudio/work/Old2Life/test_checkpoints \
---debug
+--niter 15 \
+--niter_decay 15
 
