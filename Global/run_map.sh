@@ -1,7 +1,6 @@
 python Global/train_mapping.py \
 --use_v2_degradation \
 --training_dataset mapping \
---use_vae_which_epoch 200 \
 --name mapping_quality \
 --label_nc 0 \
 --loadSize 256 \
@@ -18,7 +17,7 @@ python Global/train_mapping.py \
 --map_mc 512 --use_l1_feat \
 --niter 150 --niter_decay 100 \
 --use_vae_which_epoch latest \
---which_opech latest \
+--which_epoch latest \
 --load_pretrainA /home/aistudio/work/Old2Life/checkpoints/domainA_SR_old_photos \
 --load_pretrainB /home/aistudio/work/Old2Life/checkpoints/domainB_old_photos \
 --dataroot /home/aistudio/work/Old2Life/old \
