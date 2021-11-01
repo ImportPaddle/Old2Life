@@ -46,13 +46,11 @@ class BaseModel(paddle.nn.Layer):
         save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
         save_path = os.path.join(self.save_dir, save_filename)
         paddle.save(network.state_dict(), save_path)
-        if len(gpu_ids) and paddle.device.is_compiled_with_cuda():
-            network.cuda()
 
     def save_optimizer(self, optimizer, optimizer_label, epoch_label):
         save_filename = "%s_optimizer_%s.pth" % (epoch_label, optimizer_label)
         save_path = os.path.join(self.save_dir, save_filename)
-        paddle.save(optimizer.state_dict(), save_path)
+        paddle.save({'parameters': optimizer.state_dict(), 'lr': optimizer.get_lr()}, save_path)
 
     def load_optimizer(self, optimizer, optimizer_label, epoch_label, save_dir=""):
         save_filename = "%s_optimizer_%s.pth" % (epoch_label, optimizer_label)
@@ -63,7 +61,8 @@ class BaseModel(paddle.nn.Layer):
         if not os.path.isfile(save_path):
             print("%s not exists yet!" % save_path)
         else:
-            optimizer.load_state_dict(paddle.load(save_path))
+            optimizer.set_state_dict(paddle.load(save_path)['parameters'])
+            optimizer.set_lr(paddle.load(save_path)['lr'])
 
     # helper loading function that can be used by subclasses
     def load_network(self, network, network_label, epoch_label, save_dir=""):
@@ -79,17 +78,17 @@ class BaseModel(paddle.nn.Layer):
             # if network_label == 'G':
             #     raise('Generator must exist!')
         else:
-            # network.load_state_dict(paddle.load(save_path))
+            # network.set_state_dict(paddle.load(save_path))
             try:
                 # print(save_path)
-                print('path:',save_path)
-                network.load_state_dict(paddle.load(save_path))
+                print('path:', save_path)
+                network.set_state_dict(paddle.load(save_path))
             except:
                 pretrained_dict = paddle.load(save_path)
                 model_dict = network.state_dict()
                 try:
                     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-                    network.load_state_dict(pretrained_dict)
+                    network.set_state_dict(pretrained_dict)
                     # if self.opt.verbose:
                     print(
                         "Pretrained network %s has excessive layers; Only loading layers that are used"
@@ -116,7 +115,7 @@ class BaseModel(paddle.nn.Layer):
                             not_initialized.add(k.split(".")[0])
 
                     print(sorted(not_initialized))
-                    network.load_state_dict(model_dict)
+                    network.set_state_dict(model_dict)
 
     def update_learning_rate():
         pass
