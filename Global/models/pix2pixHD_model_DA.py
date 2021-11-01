@@ -359,12 +359,15 @@ class Pix2PixHDModel(BaseModel):
     def update_learning_rate(self):
         lrd = self.opt.lr / self.opt.niter_decay
         lr = self.old_lr - lrd
-        for param_group in self.optimizer_D._parameter_list:
-            param_group['lr'] = lr
-        for param_group in self.optimizer_G._parameter_list:
-            param_group['lr'] = lr
-        for param_group in self.optimizer_featD._parameter_list:
-            param_group['lr'] = lr
+        self.optimizer_D.set_lr(lr)
+        self.optimizer_G.set_lr(lr)
+        self.optimizer_featD.set_lr(lr)
+        # for param_group in self.optimizer_D._parameter_list:
+        #     param_group['lr'] = lr
+        # for param_group in self.optimizer_G._parameter_list:
+        #     param_group['lr'] = lr
+        # for param_group in self.optimizer_featD._parameter_list:
+        #     param_group['lr'] = lr
         if self.opt.verbose:
             print('update learning rate: %f -> %f' % (self.old_lr, lr))
         self.old_lr = lr

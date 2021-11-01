@@ -12,16 +12,19 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 | Performance | PSNR | SSIM | FID | LPIPS |
 |:---:|:---:|:---:|:---:|:---:|
 | Target| 23.33| 0.69 | 134.35 | 0.25 |
-|stage_A/Epoch(5) | 22.333 | 0.639 | 131.608 | 0.404 |
-|stage_B/Epoch(5) | 21.215 | 0.669 | 106.524 | 0.342 |
+|stage_A/Epoch(6) | 21.765 | 0.648 | 87.285 | 0.404 |
+|stage_B/Epoch(10) | 22.781 | 0.774 | 39.342 | 0.261 |
 |stage_Map//Epoch() |    |    |    |    |
 
 <img src='imgs/0001.jpg'/>
 
 训练方式：  
 终端在`Old2Life`文件目录下执行以下命令：  
-`bash train.sh`  
-如果需要更改训练参数，可以在当中进行修改  
+`bash train.sh`    
+如果想要训练单个阶段，可以通过如下命令执行。  
+`bash Global/run_a.sh`、`bash Global/run_b.sh`、`bash Global/run_map.sh`
+
+如果需要更改训练参数，可以在当中进行修改。  
 
 **必选参数解释**  
 + `dataroor`:存放图片数据的位置。格式为.bigfile.例如：`/home/aistudio/work/Old2Life/test_old`  
