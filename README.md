@@ -3,10 +3,38 @@
 # Old Photo Restoration (Official PyTorch Implementation)
 
 aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2524206?contributionType=1&shared=1  
-复现论文为：  
-官方开源 pytorch 代码：Bringing-Old-Photos-Back-to-Life
+复现论文为：[Old Photo Restoration via Deep Latent Space Translation](https://paperswithcode.com/paper/old-photo-restoration-via-deep-latent-space)  
+官方开源 pytorch 代码：[Bringing-Old-Photos-Back-to-Life](https://github.com/microsoft/Bringing-Old-Photos-Back-to-Life)  
+数据集采用VOC数据集，和小部分真实老照片，老照片[数据地址](https://www.hpcbristol.net/photographers)
+
+精度指标达标情况：  
+
+| Performance | PSNR | SSIM | FID | LPIPS |
+|:---:|:---:|:---:|:---:|:---:|
+| Target| 23.33| 0.69 | 134.35 | 0.25 |
+|stage_A/Epoch(5) | 22.333 | 0.639 | 131.608 | 0.404 |
+|stage_B/Epoch(5) | 21.215 | 0.669 | 106.524 | 0.342 |
+|stage_Map//Epoch() |    |    |    |    |
 
 <img src='imgs/0001.jpg'/>
+
+训练方式：  
+终端在`Old2Life`文件目录下执行以下命令：  
+`bash train.sh`  
+如果需要更改训练参数，可以在当中进行修改  
+
+**必选参数解释**  
++ `dataroor`:存放图片数据的位置。格式为.bigfile.例如：`/home/aistudio/work/Old2Life/test_old`  
++ `output_dir`:图片输出路径。第一行为扰动照片，第二行为生成的结果，第三行为训练目标。例如：`/home/aistudio/work/Old2Life/output/`
++ `checkpoints_dir`:保存结果参数和训练日志存放路径。例如：`/home/aistudio/work/Old2Life/checkpoints \`
+
+测试方式：  
+终端在`Old2Life`目录下执行以下命令：  
+`bash test.sh`  
+
+**必选参数解释**  
++ `dataroor`:存放图片数据的位置。格式为.bigfile.例如：`/home/aistudio/work/Old2Life/test_old`  
++ `output_dir`:图片输出路径。第一行为扰动照片，第二行为生成的结果，第三行为训练目标。例如：`/home/aistudio/work/Old2Life/output/`
 
 ### [Project Page](http://raywzy.com/Old_Photo/) | [Paper (CVPR version)](https://arxiv.org/abs/2004.09484) | [Paper (Journal version)](https://arxiv.org/pdf/2009.07047v1.pdf) | [Pretrained Model](https://hkustconnect-my.sharepoint.com/:f:/g/personal/bzhangai_connect_ust_hk/Em0KnYOeSSxFtp4g_dhWdf0BdeT3tY12jIYJ6qvSf300cA?e=nXkJH2) | [Colab Demo](https://colab.research.google.com/drive/1NEm6AsybIiC5TwTU_4DqDkQO0nFRB-uA?usp=sharing)  | [Replicate Demo & Docker Image](https://replicate.ai/zhangmozhe/bringing-old-photos-back-to-life) :fire:
 
