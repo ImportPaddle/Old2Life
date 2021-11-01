@@ -12,9 +12,9 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 | Performance | PSNR | SSIM | FID | LPIPS |
 |:---:|:---:|:---:|:---:|:---:|
 | Target| 23.33| 0.69 | 134.35 | 0.25 |
-|stage_A/Epoch(8) | 21.985 | 0.669 | 73.106 | 0.386 |
-|stage_B/Epoch(10) | 22.781 | 0.774 | 39.342 | 0.261 |
-|stage_Map//Epoch() |    |    |    |    |
+|stage_A/Epoch(9) | 22.230 | 0.683 | 67.703 | 0.377 |
+|stage_B/Epoch(12) | 23.122 | 0.797 | 33.248 | 0.233 |
+|stage_Map/Epoch(20/A:20,B:20) |    |    |    |    |
 
 <img src='imgs/0001.jpg'/>
 
