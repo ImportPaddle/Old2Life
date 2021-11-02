@@ -29,8 +29,8 @@ def make_dataset(dir):
     return images
 
 ### Modify these 3 lines in your own environment
-indir="D:\Desktop\plan\Old2Life\Global\\temp_old\\VOC"
-target_folders=['VOC2007','Real_L_old','Real_RGB_old']
+indir="D:\Desktop\plan\Old2Life\Global\\temp_old"
+target_folders=['VOC','Real_L_old','Real_RGB_old']
 out_dir ="D:\Desktop\plan\Old2Life\Global\\temp_old"
 ###
 

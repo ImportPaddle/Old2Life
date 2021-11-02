@@ -14,7 +14,7 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 | Target| 23.33| 0.69 | 134.35 | 0.25 |
 |stage_A/Epoch(20) | 23.929 | 0.749 | 31.928 | 0.302 |
 |stage_B/Epoch(20) | 24.269 | 0.834 | 21.873 | 0.189 |
-|stage_Map/Epoch(10/A:20,B:20) | 21.569 | 0.683 | 164.590 | 0.351 |
+|stage_Map/Epoch(12/A:20,B:20) | 21.853 | 0.686 | 166.185 | 0.346 |
 
 **训练方式**：
 
@@ -39,7 +39,7 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 终端在`Old2Life`目录下执行以下命令：  
 `bash test_Sea.sh`  
 **2.查看图片重建可视化效果**  
-终端在`Old2Life`目录下执行以下命令： 
+终端在`Old2Life`目录下执行以下命令：  
 `bash test_Elm.sh`  
 
 **必选参数解释**   
