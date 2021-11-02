@@ -19,8 +19,7 @@ import random
 
 opt = TrainOptions().parse()
 visualizer = Visualizer(opt)
-print(opt)
-raise NotImplementedError
+
 if opt.debug:
     opt.display_freq = 1
     opt.print_freq = 1

@@ -18,5 +18,5 @@ python Global/test_Elm.py \
   --load_pretrainA /D/Desktop/plan/Old2Life/Global/checkpoints/domainA_SR_old_photos \
   --load_pretrainB /D/Desktop/plan/Old2Life/Global/checkpoints/domainB_old_photos \
   --checkpoints_dir D:\\Desktop\\plan\\Old2Life\\Global\\checkpoints \
-  --test_input /D/Desktop/plan/Old2Life/test_images/old \
-  --outputs_dir /D/Desktop/plan/Old2Life/output
+  --test_input /D/Desktop/okok/img \
+  --outputs_dir /D/Desktop/okok/output

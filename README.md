@@ -16,35 +16,47 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 |stage_B/Epoch(20) | 24.269 | 0.834 | 21.873 | 0.189 |
 |stage_Map/Epoch(10/A:20,B:20) | 21.569 | 0.683 | 164.590 | 0.351 |
 
-<img src='imgs/0001.jpg'/>
+**训练方式**：
 
-训练方式：  
-终端在`Old2Life`文件目录下执行以下命令：  
++ 终端在`Old2Life`文件目录下执行以下命令：  
 `bash train.sh`    
-如果想要训练单个阶段，可以通过如下命令执行。  
++ 如果想要训练单个阶段，可以通过如下命令执行。  
 `bash Global/run_a.sh`、`bash Global/run_b.sh`、`bash Global/run_map.sh`
 
 如果需要更改训练参数，可以在当中进行修改。  
 
 **必选参数解释**  
-+ `dataroor`:存放图片数据的位置。格式为.bigfile.例如：`/home/aistudio/work/Old2Life/test_old`  
-+ `output_dir`:图片输出路径。第一行为扰动照片，第二行为生成的结果，第三行为训练目标。例如：`/home/aistudio/work/Old2Life/output/`
-+ `checkpoints_dir`:保存结果参数和训练日志存放路径。例如：`/home/aistudio/work/Old2Life/checkpoints \`
++ `dataroor`:存放图片数据的位置。格式为.bigfile。  
+  例如：`/home/aistudio/work/Old2Life/test_old`  
++ `output_dir`:图片输出路径。第一行为扰动照片，第二行为生成的结果，第三行为训练目标。  
+  例如：`/home/aistudio/work/Old2Life/output/`
++ `checkpoints_dir`:保存结果参数和训练日志存放路径。  
+  例如：`/home/aistudio/work/Old2Life/checkpoints \`
 
-测试方式：  
+**测试方式**： 
+
 **1.查看测试指标**  
 终端在`Old2Life`目录下执行以下命令：  
 `bash test_Sea.sh`  
 **2.查看图片重建可视化效果**  
 终端在`Old2Life`目录下执行以下命令： 
 `bash test_Elm.sh`  
+
 **必选参数解释**   
-`load_pretrainA`：存放A阶段训练模型的路径文件夹。例如：`/D/Desktop/plan/Old2Life/Global/checkpoints/domainA_SR_old_photos`
-`load_pretrainB`：存放B阶段训练模型的路径文件夹。例如：`/D/Desktop/plan/Old2Life/Global/checkpoints/domainB_old_photos`
-`dataroot`：测试性能指标的图片的存放路径。例如：`/home/aistudio/work/Old2Life/test_old`
-`checkpoints_dir`：存放配置信息和模型信息的主文件位置。例如：`D:\\Desktop\\plan\\Old2Life\\Global\\checkpoints`
- `test_input`：测试老照片图片存放的位置。例如：`/home/aistudio/work/Old2Life/test_old`  
- `output_dir`：转换的图片输出路径。例如：`/home/aistudio/work/Old2Life/output/`
++ `load_pretrainA`：存放A阶段训练模型的路径文件夹。  
+  例如：`/D/Desktop/plan/Old2Life/Global/checkpoints/domainA_SR_old_photos`
++ `load_pretrainB`：存放B阶段训练模型的路径文件夹。  
+  例如：`/D/Desktop/plan/Old2Life/Global/checkpoints/domainB_old_photos`
++ `dataroot`：测试性能指标的图片的存放路径。  
+  例如：`/home/aistudio/work/Old2Life/test_old`
++ `checkpoints_dir`：存放配置信息和模型信息的主文件位置。  
+  例如：`D:\\Desktop\\plan\\Old2Life\\Global\\checkpoints`
++ `test_input`：测试老照片图片存放的位置。  
+  例如：`/home/aistudio/work/Old2Life/test_old`  
++ `output_dir`：转换的图片输出路径。  
+  例如：`/home/aistudio/work/Old2Life/output/`
+  
+<img src='imgs/0001.jpg'/>
 
 ### [Project Page](http://raywzy.com/Old_Photo/) | [Paper (CVPR version)](https://arxiv.org/abs/2004.09484) | [Paper (Journal version)](https://arxiv.org/pdf/2009.07047v1.pdf) | [Pretrained Model](https://hkustconnect-my.sharepoint.com/:f:/g/personal/bzhangai_connect_ust_hk/Em0KnYOeSSxFtp4g_dhWdf0BdeT3tY12jIYJ6qvSf300cA?e=nXkJH2) | [Colab Demo](https://colab.research.google.com/drive/1NEm6AsybIiC5TwTU_4DqDkQO0nFRB-uA?usp=sharing)  | [Replicate Demo & Docker Image](https://replicate.ai/zhangmozhe/bringing-old-photos-back-to-life) :fire:
 
