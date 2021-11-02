@@ -15,7 +15,6 @@ python Global/train_mapping.py \
 --mc 64 --k_size 4 \
 --start_r 1 --mapping_n_block 6 \
 --map_mc 512 --use_l1_feat \
---niter 150 --niter_decay 100 \
 --use_vae_which_epoch latest \
 --which_epoch latest \
 --load_pretrainA /home/aistudio/work/Old2Life/checkpoints/domainA_SR_old_photos \

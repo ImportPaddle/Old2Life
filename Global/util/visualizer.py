@@ -133,7 +133,7 @@ class Visualizer():
             log_file.write('%s\n' % message)
 
     def print_current_performance(self, Epoch, PSNR, SSIM, FID, LPIPS):
-        message = 'Epoch: %d || ---PSNR:%.3f ---SSIM:%.3f ---FID:%.3f ---LPIPS:%.3f' % (Epoch, PSNR, SSIM, FID, LPIPS)
+        message = 'Epoch: %s || ---PSNR:%.3f ---SSIM:%.3f ---FID:%.3f ---LPIPS:%.3f' % (Epoch, PSNR, SSIM, FID, LPIPS)
         # print(message)
         with open(self.log_name, "a") as log_file:
             self.logger.info(message)

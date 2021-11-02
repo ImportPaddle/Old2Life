@@ -105,7 +105,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
         )
 
         if opt.non_local == "Setting_42" or opt.NL_use_mask:
-            if opt.mapping_exp==1:
+            if opt.mapping_exp == 1:
                 self.mapping_net = Mapping_Model_with_mask_2(
                     min(opt.ngf * 2 ** opt.n_downsample_global, opt.mc),
                     opt.map_mc,
@@ -128,7 +128,6 @@ class Pix2PixHDModel_Mapping(BaseModel):
             )
 
         self.mapping_net.apply(networks.weights_init)
-
         if opt.load_pretrain != "":
             self.load_network(self.mapping_net, "mapping_net", opt.which_epoch, opt.load_pretrain)
         if not opt.no_load_VAE:
@@ -142,17 +141,16 @@ class Pix2PixHDModel_Mapping(BaseModel):
             self.netG_A.eval()
             self.netG_B.eval()
 
-        if opt.isTrain and len(opt.gpu_ids) > 1:
-            self.netG_A = paddle.DataParallel(self.netG_A)
-            self.netG_B = paddle.DataParallel(self.netG_B)
-            self.mapping_net = paddle.DataParallel(self.mapping_net)
+        # if opt.isTrain and len(opt.gpu_ids) > 1:
+        #     self.netG_A = paddle.DataParallel(self.netG_A)
+        #     self.netG_B = paddle.DataParallel(self.netG_B)
+        #     self.mapping_net = paddle.DataParallel(self.mapping_net)
 
         # if opt.gpu_ids:
         #     self.netG_A.cuda(opt.gpu_ids[0])
         #     self.netG_B.cuda(opt.gpu_ids[0])
         #     self.mapping_net.cuda(opt.gpu_ids[0])
-        
-        if not self.isTrain:
+        if not self.isTrain or opt.continue_train:
             self.load_network(self.mapping_net, "mapping_net", opt.which_epoch)
 
         # Discriminator network
@@ -163,7 +161,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
                 netD_input_nc += 1
 
             self.netD = networks.define_D(netD_input_nc, opt.ndf, opt.n_layers_D, opt, opt.norm, use_sigmoid,
-                                              opt.num_D, not opt.no_ganFeat_loss, gpu_ids=self.gpu_ids)
+                                          opt.num_D, not opt.no_ganFeat_loss, gpu_ids=self.gpu_ids)
 
         # set loss functions and optimizers
         if self.isTrain:
@@ -173,50 +171,49 @@ class Pix2PixHDModel_Mapping(BaseModel):
             self.old_lr = opt.lr
 
             # define loss functions
-            self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss, opt.Smooth_L1, opt.use_two_stage_mapping)
+            self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss, opt.Smooth_L1,
+                                                     opt.use_two_stage_mapping)
 
             self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan)
-
 
             self.criterionFeat = paddle.nn.L1Loss()
             self.criterionFeat_feat = paddle.nn.L1Loss() if opt.use_l1_feat else paddle.nn.MSELoss()
 
             if self.opt.image_L1:
-                self.criterionImage=paddle.nn.L1Loss()
+                self.criterionImage = paddle.nn.L1Loss()
             else:
                 self.criterionImage = paddle.nn.SmoothL1Loss()
-
 
             print(self.criterionFeat_feat)
             if not opt.no_vgg_loss:
                 self.criterionVGG = networks.VGGLoss_torch(self.gpu_ids)
-                
-        
+
             # Names so we can breakout loss
-            self.loss_names = self.loss_filter('G_Feat_L2', 'G_GAN', 'G_GAN_Feat', 'G_VGG','D_real', 'D_fake', 'Smooth_L1', 'G_Feat_L2_Stage_1')
+            self.loss_names = self.loss_filter('G_Feat_L2', 'G_GAN', 'G_GAN_Feat', 'G_VGG', 'D_real', 'D_fake',
+                                               'Smooth_L1', 'G_Feat_L2_Stage_1')
 
             # initialize optimizers
             # optimizer G
 
             if opt.no_TTUR:
-                beta1,beta2=opt.beta1,0.999
-                G_lr,D_lr=opt.lr,opt.lr
+                beta1, beta2 = opt.beta1, 0.999
+                G_lr, D_lr = opt.lr, opt.lr
             else:
-                beta1,beta2=0,0.9
-                G_lr,D_lr=opt.lr/2,opt.lr*2
-
+                beta1, beta2 = 0, 0.9
+                G_lr, D_lr = opt.lr / 2, opt.lr * 2
 
             if not opt.no_load_VAE:
                 params = list(self.mapping_net.parameters())
-                self.optimizer_mapping = paddle.optimizer.Adam(parameters=params, learning_rate=G_lr, beta1=beta1, beta2=beta2)
+                self.optimizer_mapping = paddle.optimizer.Adam(parameters=params, learning_rate=G_lr, beta1=beta1,
+                                                               beta2=beta2)
 
             # optimizer D                        
-            params = list(self.netD.parameters())    
+            params = list(self.netD.parameters())
             self.optimizer_D = paddle.optimizer.Adam(parameters=params, learning_rate=D_lr, beta1=beta1, beta2=beta2)
 
             print("---------- Optimizers initialized -------------")
 
-    def encode_input(self, label_map, inst_map=None, real_image=None, feat_map=None, infer=False):             
+    def encode_input(self, label_map, inst_map=None, real_image=None, feat_map=None, infer=False):
         if self.opt.label_nc == 0:
             input_label = label_map
         else:
@@ -225,7 +222,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
             oneHot_size = (size[0], self.opt.label_nc, size[2], size[3])
             # input_label = paddle.to_tensor(paddle.Tensor.size(oneHot_size)).zero_()# todo
             input_label = paddle.ones(oneHot_size)
-            input_label = input_label.scatter_(1, label_map.astype(paddle.int64), 1.0) # todo long
+            input_label = input_label.scatter_(1, label_map.astype(paddle.int64), 1.0)  # todo long
             if self.opt.data_type == 16:
                 input_label = input_label.astype(paddle.int16)
 
@@ -244,7 +241,7 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
     def discriminate(self, input_label, test_image, use_pool=False):
         input_concat = paddle.concat((input_label, test_image.detach()), axis=1)
-        if use_pool:            
+        if use_pool:
             fake_query = self.fake_pool.query(input_concat)
             return self.netD.forward(fake_query)
         else:
@@ -255,32 +252,31 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
     def forward(self, label, inst, image, feat, pair=True, infer=False, last_label=None, last_image=None):
         # Encode Inputs
-        input_label, inst_map, real_image, feat_map = self.encode_input(label, inst, image, feat)  
+        input_label, inst_map, real_image, feat_map = self.encode_input(label, inst, image, feat)
 
         # Fake Generation
         input_concat = input_label
-        
+
         label_feat = self.netG_A.forward(input_concat, flow='enc')
         # print('label:')
         # print(label_feat.min(), label_feat.max(), label_feat.mean())
-        #label_feat = label_feat / 16.0
+        # label_feat = label_feat / 16.0
 
-        if self.opt.NL_use_mask: 
-            label_feat_map=self.mapping_net(label_feat.detach(),inst)
+        if self.opt.NL_use_mask:
+            label_feat_map = self.mapping_net(label_feat.detach(), inst)
         else:
             label_feat_map = self.mapping_net(label_feat.detach())
-        
+
         fake_image = self.netG_B.forward(label_feat_map, flow='dec')
         image_feat = self.netG_B.forward(real_image, flow='enc')
 
-        loss_feat_l2_stage_1=0
+        loss_feat_l2_stage_1 = 0
         loss_feat_l2 = self.criterionFeat_feat(label_feat_map, image_feat) * self.opt.l2_feat
-            
 
         if self.opt.feat_gan:
             # Fake Detection and Loss
             pred_fake_pool = self.discriminate(label_feat.detach(), label_feat_map, use_pool=True)
-            loss_D_fake = self.criterionGAN(pred_fake_pool, False)        
+            loss_D_fake = self.criterionGAN(pred_fake_pool, False)
 
             # Real Detection and Loss        
             pred_real = self.discriminate(label_feat.detach(), image_feat)
@@ -288,14 +284,14 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
             # GAN loss (Fake Passability Loss)        
             pred_fake = self.netD.forward(paddle.concat((label_feat.detach(), label_feat_map), axis=1))
-            loss_G_GAN = self.criterionGAN(pred_fake, True)  
+            loss_G_GAN = self.criterionGAN(pred_fake, True)
         else:
             # Fake Detection and Loss
             pred_fake_pool = self.discriminate(input_label, fake_image, use_pool=True)
-            loss_D_fake = self.criterionGAN(pred_fake_pool, False)        
+            loss_D_fake = self.criterionGAN(pred_fake_pool, False)
 
             # Real Detection and Loss  
-            if pair:      
+            if pair:
                 pred_real = self.discriminate(input_label, real_image)
             else:
                 pred_real = self.discriminate(last_label, last_image)
@@ -303,31 +299,32 @@ class Pix2PixHDModel_Mapping(BaseModel):
 
             # GAN loss (Fake Passability Loss)        
             pred_fake = self.netD.forward(paddle.concat((input_label, fake_image), axis=1))
-            loss_G_GAN = self.criterionGAN(pred_fake, True)               
-        
-        # GAN feature matching loss
+            loss_G_GAN = self.criterionGAN(pred_fake, True)
+
+            # GAN feature matching loss
         loss_G_GAN_Feat = 0
         if not self.opt.no_ganFeat_loss and pair:
             feat_weights = 4.0 / (self.opt.n_layers_D + 1)
             D_weights = 1.0 / self.opt.num_D
             for i in range(self.opt.num_D):
-                for j in range(len(pred_fake[i])-1):
+                for j in range(len(pred_fake[i]) - 1):
                     tmp = self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat
                     loss_G_GAN_Feat += D_weights * feat_weights * tmp
         else:
             loss_G_GAN_Feat = paddle.zeros(1).to(label.device)
-                   
+
         # VGG feature matching loss
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
-            loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat if pair else paddle.zeros(1).to(label.device)
+            loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat if pair else paddle.zeros(
+                1).to(label.device)
 
-        smooth_l1_loss=0
+        smooth_l1_loss = 0
         if self.opt.Smooth_L1:
-            smooth_l1_loss=self.criterionImage(fake_image,real_image)*self.opt.L1_weight
+            smooth_l1_loss = self.criterionImage(fake_image, real_image) * self.opt.L1_weight
 
-
-        return [ self.loss_filter(loss_feat_l2, loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake,smooth_l1_loss,loss_feat_l2_stage_1), None if not infer else fake_image ]
+        return [self.loss_filter(loss_feat_l2, loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake,
+                                 smooth_l1_loss, loss_feat_l2_stage_1), None if not infer else fake_image]
 
     def encode_features(self, image, inst):
         image = paddle.to_tensor(image)
@@ -363,19 +360,19 @@ class Pix2PixHDModel_Mapping(BaseModel):
         else:
             return edge.astype(paddle.float32)
 
-
     def inference(self, label, inst):
 
         use_gpu = len(self.opt.gpu_ids) > 0
-        input_concat = label
+        # input_concat = label
+        input_concat, _, _, _ = self.encode_input(label)
         inst_data = inst
 
         label_feat = self.netG_A.forward(input_concat, flow="enc")
 
         if self.opt.NL_use_mask:
             if self.opt.inference_optimize:
-                label_feat_map=self.mapping_net.inference_forward(label_feat.detach(),inst_data)
-            else:   
+                label_feat_map = self.mapping_net.inference_forward(label_feat.detach(), inst_data)
+            else:
                 label_feat_map = self.mapping_net(label_feat.detach(), inst_data)
         else:
             label_feat_map = self.mapping_net(label_feat.detach())
@@ -383,13 +380,15 @@ class Pix2PixHDModel_Mapping(BaseModel):
         fake_image = self.netG_B.forward(label_feat_map, flow="dec")
         return fake_image
 
-
     def update_learning_rate(self):
         lrd = self.opt.lr / self.opt.niter_decay
         lr = self.old_lr - lrd
-        self.optimizer_G.set_lr(lr)
+
         self.optimizer_D.set_lr(lr)
-        self.optimizer_mapping.set_lr(lr)
+        try:
+            self.optimizer_mapping.set_lr(lr)
+        except:
+            raise NotImplementedError
         # for param_group in self.optimizer_D._parameter_list:
         #     param_group['lr'] = lr
         # for param_group in self.optimizer_G._parameter_list:
@@ -404,4 +403,3 @@ class Pix2PixHDModel_Mapping(BaseModel):
 class InferenceModel(Pix2PixHDModel_Mapping):
     def forward(self, label, inst):
         return self.inference(label, inst)
-

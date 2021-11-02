@@ -69,21 +69,15 @@ class BaseModel(paddle.nn.Layer):
         save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
         if not save_dir:
             save_dir = self.save_dir
-
-        # print(save_dir)
-        # print(self.save_dir)
         save_path = os.path.join(save_dir, save_filename)
         if not os.path.isfile(save_path):
             print("%s not exists yet!" % save_path)
-            # if network_label == 'G':
-            #     raise('Generator must exist!')
         else:
-            # network.set_state_dict(paddle.load(save_path))
             try:
-                # print(save_path)
-                print('path:', save_path)
                 network.set_state_dict(paddle.load(save_path))
+                print('network import path:',save_path)
             except:
+                raise NotImplementedError
                 pretrained_dict = paddle.load(save_path)
                 model_dict = network.state_dict()
                 try:
@@ -112,7 +106,7 @@ class BaseModel(paddle.nn.Layer):
 
                     for k, v in model_dict.items():
                         if k not in pretrained_dict or v.shape != pretrained_dict[k].shape:
-                            not_initialized.add(k.split(".")[0])
+                            not_initialized.add(k.split("."))
 
                     print(sorted(not_initialized))
                     network.set_state_dict(model_dict)
