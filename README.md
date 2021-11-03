@@ -25,7 +25,7 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 |stage_B/Epoch(20) | 24.269 | 0.834 | 21.873 | 0.189 |
 |stage_Map/Epoch(20/A:20,B:20) | 22.930 | 0.709 | 122.859 | 0.321 |
 
-**训练方式**：
+## **训练方式**：
 
 + 终端在`Old2Life`文件目录下执行以下命令：  
 `bash train.sh`    
@@ -42,7 +42,7 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 + `checkpoints_dir`:保存结果参数和训练日志存放路径。  
   例如：`/home/aistudio/work/Old2Life/checkpoints \`
 
-**测试方式**： 
+## **测试方式**： 
 
 **1.查看测试指标**  
 终端在`Old2Life`目录下执行以下命令：  
@@ -64,3 +64,7 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
   例如：`/home/aistudio/work/Old2Life/test_old`  
 + `output_dir`：转换的图片输出路径。  
   例如：`/home/aistudio/work/Old2Life/output/`
+  
+## 效果图展示
+
+![](./imgs/output.png)

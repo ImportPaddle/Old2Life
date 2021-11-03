@@ -108,9 +108,7 @@ if __name__ == "__main__":
         [transforms.Normalize(mean=(127.5,127.5,127.5),std=(127.5,127.5,127.5),data_format='HWC'),
          transforms.ToTensor()]
     )
-
     mask_transform = transforms.ToTensor()
-
     for i in range(dataset_size):
 
         input_name = input_loader[i]
@@ -162,3 +160,5 @@ if __name__ == "__main__":
             normalize=True,
         )
         origin.save(opt.outputs_dir + "/origin/" + input_name)
+
+
