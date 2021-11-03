@@ -1,6 +1,6 @@
 
 
-# Old Photo Restoration (Official PyTorch Implementation)
+# Old Photo Restoration (Paddle Implementation)
 
 aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2524206?contributionType=1&shared=1  
 复现论文为：[Old Photo Restoration via Deep Latent Space Translation](https://paperswithcode.com/paper/old-photo-restoration-via-deep-latent-space)  
