@@ -67,4 +67,4 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
   
 ## 效果图展示
 
-![](./imgs/output.png)
+![效果图](./imgs/output.png)
