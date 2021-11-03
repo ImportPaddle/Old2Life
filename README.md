@@ -7,6 +7,15 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 官方开源 pytorch 代码：[Bringing-Old-Photos-Back-to-Life](https://github.com/microsoft/Bringing-Old-Photos-Back-to-Life)  
 数据集采用VOC数据集，和小部分真实老照片，老照片[数据地址](https://www.hpcbristol.net/photographers)
 
+模型及配置文件存放网盘链接：https://pan.baidu.com/s/1cHqzIwtIEv92wsGOrxQwiQ 
+提取码：fjng  
+
+可视化效果图网盘链接：https://pan.baidu.com/s/1uzyHsURuNDw1Kv0vPbrR8Q 
+提取码：s32p   
+
+训练数据网盘链接：https://pan.baidu.com/s/1cBgs5zntYFbXDfhvht7dPg 
+提取码：9uk6
+
 训练精度指标达标情况：  
 
 | Performance | PSNR | SSIM | FID | LPIPS |
@@ -14,7 +23,7 @@ aistudio项目链接地址：https://aistudio.baidu.com/aistudio/projectdetail/2
 | Target| 23.33| 0.69 | 134.35 | 0.25 |
 |stage_A/Epoch(20) | 23.929 | 0.749 | 31.928 | 0.302 |
 |stage_B/Epoch(20) | 24.269 | 0.834 | 21.873 | 0.189 |
-|stage_Map/Epoch(13/A:20,B:20) | 22.930 | 0.709 | 122.859 | 0.321 |
+|stage_Map/Epoch(20/A:20,B:20) | 22.930 | 0.709 | 122.859 | 0.321 |
 
 **训练方式**：
 
